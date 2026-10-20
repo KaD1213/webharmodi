@@ -78,7 +78,31 @@ for(let i=firstKey;i<=lastKey;i++){
   $('keyboard').append(b);
   const mini=document.createElement('span');mini.className=black?'mini-black':'mini-white';mini.style.left=left+'%';mini.style.width=width+'%';$('miniKeys').append(mini);
 }
-$('rangeSlider').oninput=e=>setRange(+e.target.value);
+const rangeSlider=$('rangeSlider');
+let rangeDrag=null;
+rangeSlider.onpointerdown=e=>{
+  if(e.button!==0||!e.isPrimary)return;
+  e.preventDefault();
+  const rect=rangeSlider.getBoundingClientRect();
+  rangeDrag={pointerId:e.pointerId,startX:e.clientX,startIndex:viewIndex,width:rect.width};
+  rangeSlider.setPointerCapture(e.pointerId);
+  rangeSlider.classList.add('dragging');
+};
+rangeSlider.onpointermove=e=>{
+  if(!rangeDrag||e.pointerId!==rangeDrag.pointerId)return;
+  e.preventDefault();
+  const delta=(e.clientX-rangeDrag.startX)/rangeDrag.width;
+  setRange(rangeDrag.startIndex+delta*(whiteKeys.length-visibleWhites));
+};
+function finishRangeDrag(e){
+  if(!rangeDrag||e.pointerId!==rangeDrag.pointerId)return;
+  rangeDrag=null;
+  rangeSlider.classList.remove('dragging');
+}
+rangeSlider.onpointerup=finishRangeDrag;
+rangeSlider.onpointercancel=finishRangeDrag;
+rangeSlider.onlostpointercapture=finishRangeDrag;
+rangeSlider.oninput=e=>{if(!rangeDrag)setRange(+e.target.value);};
 window.addEventListener('resize',()=>setRange(viewIndex));
 $('hold').onclick=()=>{state.hold=!state.hold;$('hold').classList.toggle('active',state.hold);$('hold').setAttribute('aria-pressed',String(state.hold));$('hold').innerHTML=`持続 <b>${state.hold?'ON':'OFF'}</b>`;if(!state.hold)stopNotes();};
 $('volume').oninput=e=>{state.volume=+e.target.value/100;$('volumeValue').textContent=e.target.value+'%';if(master)master.gain.setTargetAtTime(state.volume*.18,ctx.currentTime,.02);};
