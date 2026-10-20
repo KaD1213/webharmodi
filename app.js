@@ -51,14 +51,15 @@ const whiteKeys=[];
 for(let i=firstKey;i<=lastKey;i++)if(![1,3,6,8,10].includes(((i%12)+12)%12))whiteKeys.push(i);
 let viewIndex=14,viewStart=0;
 function setRange(index){
-  viewIndex=Math.max(0,Math.min(whiteKeys.length-visibleWhites,Math.round(index)));
-  viewStart=whiteKeys[viewIndex];
+  viewIndex=Math.max(0,Math.min(whiteKeys.length-visibleWhites,index));
+  viewStart=whiteKeys[Math.round(viewIndex)];
   $('rangeSlider').value=viewIndex;
   $('rangeSlider').setAttribute('aria-valuetext',noteNames[((viewStart%12)+12)%12]+(Math.floor((60+viewStart)/12)-1)+' から');
   const width=$('keyboard').scrollWidth;
-  $('keyViewport').scrollLeft=width*viewIndex/whiteKeys.length;
-  const end=whiteKeys[viewIndex+visibleWhites-1];
-  document.querySelectorAll('.key').forEach(el=>{el.hidden=+el.dataset.key<viewStart||+el.dataset.key>end;});
+  // Translate by fractional key positions so the range glides continuously;
+  // the viewport naturally clips keys at either edge during the movement.
+  $('keyboard').style.transform=`translate3d(${-width*viewIndex/whiteKeys.length}px,0,0)`;
+  const end=whiteKeys[Math.min(whiteKeys.length-1,Math.round(viewIndex+visibleWhites-1))];
   const name=k=>noteNames[((k%12)+12)%12]+(Math.floor((60+k)/12)-1);
   $('octLabel').textContent=name(viewStart)+' – '+name(end);
   $('octDown').disabled=viewIndex===0;
@@ -91,7 +92,9 @@ rangeSlider.onpointerdown=e=>{
 rangeSlider.onpointermove=e=>{
   if(!rangeDrag||e.pointerId!==rangeDrag.pointerId)return;
   e.preventDefault();
-  const delta=(e.clientX-rangeDrag.startX)/rangeDrag.width;
+  // Normalize to the thumb's actual travel, not the full rail width.
+  const travel=rangeDrag.width*(1-visibleWhites/whiteKeys.length);
+  const delta=(e.clientX-rangeDrag.startX)/Math.max(1,travel);
   setRange(rangeDrag.startIndex+delta*(whiteKeys.length-visibleWhites));
 };
 function finishRangeDrag(e){
@@ -230,3 +233,4 @@ tempoRail.onpointerup=finishWeightDrag;
 tempoRail.onpointercancel=finishWeightDrag;
 tempoRail.onlostpointercapture=finishWeightDrag;
 tempoRail.oncontextmenu=e=>e.preventDefault();
+
