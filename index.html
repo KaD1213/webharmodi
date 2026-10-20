@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f2f2f7"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="WebHarmoDi."><title>WebHarmoDi.</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="style.css"></head><body>
+<main>
+<div class="appbar"><header><h1>WebHarmoDi.</h1><button id="fullscreen" class="icon-button" aria-label="フルスクリーン" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg></button></header>
+<nav class="tabs" role="tablist" aria-label="機能"><button role="tab" id="tab-harmony" aria-selected="true" aria-controls="panel-harmony">ハーモニー</button><button role="tab" id="tab-metronome" aria-selected="false" aria-controls="panel-metronome">メトロノーム</button></nav></div>
+<section id="panel-harmony" role="tabpanel" aria-labelledby="tab-harmony">
+<div class="section-title"><h2>ハーモニー</h2><button id="settingsOpen" class="icon-button" aria-label="発音の設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6M15 14v6"/></svg></button></div>
+<div class="card controls">
+<div class="control"><label>ドの実音</label><div class="segments" id="transpose"></div></div>
+<div class="control"><label>音色</label><div class="voice-grid" id="voices"></div></div>
+<div class="tuning-row"><div class="control"><label>音律</label><div class="segments" id="temperament"></div></div><button id="hold" class="hold" aria-pressed="false">持続 <b>OFF</b></button></div>
+<div class="volume-row"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 5 9H2v6h3l6 4zM15 8q5 4 0 8M18 5q8 7 0 14"/></svg><input id="volume" aria-label="発音音量" type="range" min="0" max="100" value="45"><output id="volumeValue">45%</output></div>
+</div>
+<div class="keyboard-top"><div><strong id="doInfo">ド = C</strong><span id="pitchInfo">A = 442 Hz · 平均律</span></div></div>
+<div class="keyboard-card"><div class="range-nav"><button id="octDown" aria-label="表示音域を1オクターブ下へ">‹</button><div class="range-overview"><div id="miniKeys" aria-hidden="true"></div><input id="rangeSlider" type="range" min="0" max="21" step="1" value="14" aria-label="表示音域"></div><button id="octUp" aria-label="表示音域を1オクターブ上へ">›</button><span id="octLabel"></span></div><div id="keyViewport" class="keyboard-scroll"><div id="keyboard" class="keyboard"></div></div></div>
+</section>
+<section id="panel-metronome" role="tabpanel" aria-labelledby="tab-metronome" hidden>
+<div class="section-title"><h2>メトロノーム</h2><button id="metroSettingsOpen" class="icon-button" aria-label="メトロノームの設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6M15 14v6"/></svg></button></div>
+<div class="card metronome-card">
+<div class="metronome-main">
+<div class="mechanism"><div class="body-shape"></div><div class="scale" id="tempoScale" aria-hidden="true"></div><div class="rail" id="tempoRail"><div class="tempo-weight" id="visibleTempoWeight" aria-hidden="true"></div><input id="tempoWeight" type="range" min="0" max="38" step="1" value="21" aria-label="重りを上下してテンポを調整" aria-orientation="vertical"></div><div class="metronome-foot"></div></div>
+<div class="tempo-control"><div class="tempo-number"><input id="bpm" type="number" inputmode="numeric" min="40" max="208" value="100" aria-label="テンポ"><span>BPM</span></div><div class="tempo-nudge"><button id="slower" aria-label="テンポを下げる">−</button><button id="faster" aria-label="テンポを上げる">＋</button></div><div id="beatDots" class="beat-dots"></div><button id="tap" class="tap">タップ</button></div>
+</div>
+<button id="play" class="play" aria-pressed="false">開始</button>
+</div>
+<div class="section-title mixer-title"><h2>リズム</h2></div><div id="mixer" class="card rhythm-modes" role="group" aria-label="リズムモード"></div>
+</section>
+</main><dialog id="fullscreenHelp"><div class="dialog-head"><h2>フルスクリーン</h2><button id="fullscreenHelpClose">完了</button></div><p>このブラウザではフルスクリーンに切り替えられません。iPhoneではSafariの共有メニューから「ホーム画面に追加」し、追加したアイコンから開いてください。</p></dialog>
+<dialog id="settingsDialog"><div class="sheet-handle"></div><div class="dialog-head"><h2>発音の設定</h2><button id="settingsClose">完了</button></div><div class="setting-list"><label>基準ピッチ <span><input id="reference" type="number" inputmode="decimal" min="430" max="450" step="0.1" value="442"> Hz</span></label><label>純正律の調（実音）<select id="contextKey"></select></label><label>調性<select id="contextMode"><option value="major">長調</option><option value="minor">短調</option></select></label></div></dialog>
+<dialog id="metroSettingsDialog"><div class="sheet-handle"></div><div class="dialog-head"><h2>メトロノームの設定</h2><button id="metroSettingsClose">完了</button></div><div class="setting-list"><label>拍子<select id="beats"><option value="2">2 / 4</option><option value="3">3 / 4</option><option value="4" selected>4 / 4</option><option value="5">5 / 4</option><option value="6">6 / 4</option><option value="7">7 / 4</option></select></label><label>音色<select id="clickVoice"><option value="wood">ウッド</option><option value="beep">電子音</option><option value="click">クリック</option></select></label><label>1拍目を強拍にする<input id="accent" class="switch" type="checkbox" checked></label><label class="setting-volume">音量 <output id="metroVolumeValue">60%</output><input id="metroVolume" aria-label="メトロノーム全体音量" type="range" min="0" max="100" value="60"></label></div></dialog>
+<aside class="rotate-prompt"><svg viewBox="0 0 80 80" aria-hidden="true"><rect x="25" y="13" width="30" height="54" rx="6"/><path d="M14 28a29 29 0 0 1 49-10m-1-9 2 11-11-2M66 52a29 29 0 0 1-49 10m1 9-2-11 11 2"/></svg><h2>横向きでお使いください</h2></aside><script type="module" src="app.js"></script></body></html>
