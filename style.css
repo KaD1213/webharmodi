@@ -24,3 +24,7 @@ header{display:flex;align-items:center;gap:12px}#fullscreen{width:32px;min-heigh
 
 #keyboard{will-change:transform}
 
+.brand-wordmark{display:block;font-size:23px;letter-spacing:-1.05px;font-weight:800;line-height:1;white-space:nowrap;color:#252a36}.brand-web{font-weight:720;color:#30343d}.brand-harmo{position:relative;display:inline-block;letter-spacing:-1.15px;color:#0878e8}.brand-harmo:after{content:"";position:absolute;left:.06em;right:.08em;bottom:-.12em;height:2px;border-radius:2px;background:linear-gradient(95deg,#0878e8 0%,#62a6f5 62%,transparent 100%);transform:skewX(-24deg)}.brand-di{color:#252a36;letter-spacing:-.8px}.brand-dot{color:#0878e8}
+@media(max-width:700px) and (orientation:landscape){.brand-wordmark{font-size:19px}}
+@media(min-width:1100px) and (min-height:600px){.brand-wordmark{font-size:25px}}
+
