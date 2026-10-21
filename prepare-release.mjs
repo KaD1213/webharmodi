@@ -6,10 +6,10 @@ import {fileURLToPath} from 'node:url';
 const root=new URL('./',import.meta.url);
 const read=name=>readFileSync(new URL(name,root));
 const normalize=text=>text.replace(/((?:style\.css|themes\.css|app\.js)\?v=)[^"']+/g,'$1RELEASE').replace(/const release='[^']+';/,"const release='RELEASE';");
-const files=['index.html','app.js','style.css','themes.css','adaptive-ji.mjs','tap-tempo.mjs','sw.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','apple-touch-icon.png'];
+const files=['index.html','app.js','style.css','themes.css','adaptive-ji.mjs','tap-tempo.mjs','pendulum-motion.mjs','sw.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','apple-touch-icon.png'];
 const hash=createHash('sha256');
 for(const name of files){const bytes=read(name);hash.update(name);hash.update(name.endsWith('.png')?bytes:normalize(bytes.toString('utf8')));}
-for(const name of ['app.js','adaptive-ji.mjs','tap-tempo.mjs','sw.js'])execFileSync(process.execPath,['--input-type=module','--check'],{input:read(name),stdio:['pipe','pipe','pipe']});
+for(const name of ['app.js','adaptive-ji.mjs','tap-tempo.mjs','pendulum-motion.mjs','sw.js'])execFileSync(process.execPath,['--input-type=module','--check'],{input:read(name),stdio:['pipe','pipe','pipe']});
 const manifest=JSON.parse(read('manifest.webmanifest'));
 for(const icon of manifest.icons)read(icon.src);
 const release=hash.digest('hex').slice(0,16);

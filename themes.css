@@ -91,3 +91,4 @@ html[data-design=paper]:not([data-design=default]) .controls :is(.voice-grid but
 
 html[data-theme=dark] .range-overview input#rangeSlider::-webkit-slider-runnable-track{background:transparent;height:100%;border-radius:0}
 html[data-theme=dark] .range-overview input#rangeSlider::-moz-range-track{background:transparent;height:100%;border-radius:0}
+html[data-design]:not([data-design=default]) .tempo-nudge button{border-radius:50%;padding:0}

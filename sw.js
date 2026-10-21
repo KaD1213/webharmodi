@@ -1,8 +1,8 @@
 'use strict';
-const release='10805532f3465469';
+const release='bc9f57c7623af4d4';
 const prefix='webharmodi:'+new URL(self.registration.scope).pathname+':';
 const cacheName=prefix+release;
-const files=['./','./index.html','./style.css?v='+release,'./themes.css?v='+release,'./app.js?v='+release,'./adaptive-ji.mjs','./tap-tempo.mjs','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
+const files=['./','./index.html','./style.css?v='+release,'./themes.css?v='+release,'./app.js?v='+release,'./adaptive-ji.mjs','./tap-tempo.mjs','./pendulum-motion.mjs','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(cacheName).then(cache=>cache.addAll(files))));
 // A running session keeps its own version. Updates activate after it is closed.
 self.addEventListener('activate',event=>event.waitUntil((async()=>{

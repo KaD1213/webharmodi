@@ -1,6 +1,7 @@
 'use strict';
 import {AdaptiveJustIntonation, applyJustIntonation} from './adaptive-ji.mjs';
 import {TapTempo} from './tap-tempo.mjs';
+import {pendulumAngleAtPhase} from './pendulum-motion.mjs';
 const $=id=>document.getElementById(id);
 const designs=[['default','標準','iPhone風'],['studio','Studio','機材のような精密さ'],['modern','Modern','すっきり、モダン'],['paper','Paper','あたたかな紙の質感']];
 let designPreference='default';
@@ -259,10 +260,15 @@ function drawRhythmModes(){
 }
 function drawTempoScale(){
   $('tempoScale').innerHTML='';
+  const length=$('tempoRail').offsetHeight||180;
+  let lastLabel=-Infinity;
   tempoMarks.forEach((bpm,i)=>{
     const mark=document.createElement('span');
     mark.className='tempo-mark';mark.style.top=(i/(tempoMarks.length-1)*100)+'%';
-    if([40,60,80,100,120,144,176,208].includes(bpm)){mark.textContent=bpm;mark.className+=' labeled';}
+    const y=i/(tempoMarks.length-1)*length;
+    if([40,60,80,100,120,144,176,208].includes(bpm)&&(y-lastLabel>=16||i===0)&&((length-y)>=16||i===tempoMarks.length-1)){
+      mark.textContent=bpm;mark.className+=' labeled';lastLabel=y;
+    }
     $('tempoScale').append(mark);
   });
 }
@@ -347,6 +353,18 @@ syncFullscreen();
 // Keep the native range for keyboard / assistive input, not invisible touch geometry.
 const tempoRail=$('tempoRail'),visibleWeight=$('visibleTempoWeight');
 let weightDrag=null;
+// Reserve the complete swing envelope, rather than shifting the arm off-center.
+function layoutMechanism(){
+  const mechanism=tempoRail.closest('.mechanism');
+  const width=mechanism.clientWidth,height=mechanism.clientHeight;
+  if(!width||!height)return;
+  const length=Math.max(24,Math.min(height-50,(width/2-44)/Math.sin(38*Math.PI/180)));
+  mechanism.style.setProperty('--arm-length',length+'px');
+  mechanism.style.setProperty('--body-width',Math.min(width-12,(length+40)*.58)+'px');
+  mechanism.style.setProperty('--body-top',(height-28-length-14)+'px');
+  drawTempoScale();
+}
+new ResizeObserver(layoutMechanism).observe(tempoRail.closest('.mechanism'));
 function setPendulumAngle(angle){pendulumAngle=angle;tempoRail.style.setProperty('--pendulum-angle',angle+'deg');}
 function audibleTime(){
   const stamp=ctx.getOutputTimestamp?.();
@@ -360,8 +378,9 @@ function paintPendulum(){
   const from=pendulumFrames[0],to=pendulumFrames[1];
   if(from&&!weightDrag&&!$('panel-metronome').hidden){
     const phase=now<from.time?from.phase:to?from.phase+(to.phase-from.phase)*(now-from.time)/(to.time-from.time):from.phase+(now-from.time)*state.bpm/60;
-    // Each quarter-note click lands at the opposite end; subdivisions do not speed up the arm.
-    setPendulumAngle(-(reducedMotion.matches?6:18)*Math.cos(Math.PI*phase));
+    // Finite-amplitude pendulum: slow reversal, fast central crossing.
+    // The central beat reference alternates direction; subdivisions do not speed up the arm.
+    setPendulumAngle(pendulumAngleAtPhase(phase,reducedMotion.matches?6:38));
   }
   pendulumRAF=requestAnimationFrame(paintPendulum);
 }

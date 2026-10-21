@@ -156,3 +156,21 @@ html[data-theme="dark"] .tap:active{background:#354e6c;box-shadow:none}
 .rail{transform-origin:50% 100%;transform:rotate(var(--pendulum-angle,0deg));transition:transform .16s ease-out}
 .rail.swaying,.rail.adjusting{transition:none;will-change:transform}
 .rail::after{content:"";position:absolute;left:50%;bottom:-4px;width:8px;height:8px;transform:translateX(-50%);border-radius:50%;background:var(--muted);pointer-events:none}
+/* A centered instrument with room for the entire pendulum sweep. */
+#panel-metronome{grid-template-columns:minmax(0,2fr) minmax(150px,1fr);gap:16px}
+.metronome-main{gap:16px;align-items:stretch}
+.metronome-main .mechanism{flex:1;min-width:0;width:auto;max-width:380px;height:auto;align-self:stretch}
+.tempo-control{flex:none;align-self:center;width:130px}
+.tempo-number,.tempo-number input{width:100%}
+.mechanism .body-shape{left:50%;right:auto;top:var(--body-top,20px);bottom:10px;width:var(--body-width,130px);transform:translateX(-50%)}
+.mechanism .metronome-foot{left:50%;right:auto;bottom:7px;width:calc(var(--body-width,130px) + 8px);transform:translateX(-50%)}
+.mechanism .rail{left:calc(50% - 17.5px);top:auto;bottom:28px;height:var(--arm-length,180px)}
+.mechanism .rail .scale{left:-30px;top:0;bottom:auto;width:20px;height:100%;opacity:0;visibility:hidden;pointer-events:none}
+.mechanism .rail.dragging .scale,.mechanism .rail:focus-within .scale{opacity:1;visibility:visible}
+.mechanism .rail .tempo-mark{font-size:9px;transform:translateY(-50%) rotate(calc(0deg - var(--pendulum-angle,0deg)));transform-origin:100% 50%}
+.mechanism .rail .tempo-mark:after{right:-8px;width:5px}
+.tempo-nudge button{display:grid;place-items:center;padding:0;line-height:1}
+.tempo-nudge button svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+@media(max-width:700px) and (orientation:landscape){#panel-metronome{gap:10px}.tempo-control{width:100px}.metronome-main{gap:8px}}
+.metronome-main .mechanism{height:min(360px,calc(100dvh - 150px));align-self:center}
+.rhythm-mode{padding:10px 6px}.rhythm-mode b{white-space:nowrap}
