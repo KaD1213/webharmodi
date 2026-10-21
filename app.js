@@ -501,27 +501,91 @@ if(!navigator.requestMIDIAccess){$('midiConnect').disabled=true;$('midiStatus').
 
 // Relative URLs keep offline installation valid under GitHub Pages subdirectories.
 const localPreview=['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('preview');
+const appVersion=new URL(import.meta.url).searchParams.get('v');
+$('appVersion').textContent=appVersion?'バージョン '+appVersion.slice(0,8):'ローカルプレビュー';
 if('serviceWorker'in navigator&&!localPreview){
-  let waitingWorker=null,applyingUpdate=false;
-  function offerUpdate(registration){
-    waitingWorker=registration.waiting;
-    if(waitingWorker&&navigator.serviceWorker.controller){$('applyUpdate').hidden=false;$('offlineStatus').textContent='新しいバージョンがあります';}
+  let registration=null,applyingUpdate=false,reloading=false,checking=false,lastCheck=0;
+  const watched=new WeakSet();
+  const status=message=>$('offlineStatus').textContent=message;
+  function reloadUpdated(){
+    if(!applyingUpdate||reloading)return;
+    reloading=true;persist();location.reload();
   }
+  function offerUpdate(){
+    if(applyingUpdate)return;
+    const waiting=registration?.waiting;
+    $('applyUpdate').hidden=!waiting||!navigator.serviceWorker.controller;
+    if(waiting&&navigator.serviceWorker.controller)status('新しいバージョンがあります');
+    else if(registration?.installing)status('新しいバージョンをダウンロード中…');
+    else if(registration?.active)status('オフラインで利用できます');
+  }
+  function watchInstall(){
+    const worker=registration.installing;
+    offerUpdate();
+    if(!worker||watched.has(worker))return;
+    watched.add(worker);
+    worker.addEventListener('statechange',()=>{
+      // The waiting slot is assigned after the statechange event on some browsers.
+      setTimeout(()=>{
+        if(worker.state==='redundant'&&!applyingUpdate)status('更新を取得できませんでした。もう一度お試しください。');
+        else offerUpdate();
+      },0);
+    });
+  }
+  const registrationReady=navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(result=>{
+    registration=result;watchInstall();registration.addEventListener('updatefound',watchInstall);offerUpdate();return result;
+  });
+  // Keep registration failures handled even before the user opens settings.
+  registrationReady.catch(()=>status('オンラインで利用中。更新を確認できます。'));
+  function waitForInstall(worker){
+    if(worker?.state==='redundant')return Promise.reject(new Error('Update install failed'));
+    if(!worker||['installed','activated'].includes(worker.state))return Promise.resolve();
+    return new Promise((resolve,reject)=>{
+      const finish=()=>{clearTimeout(timer);worker.removeEventListener('statechange',changed);resolve();};
+      const changed=()=>{
+        if(worker.state==='redundant'){clearTimeout(timer);worker.removeEventListener('statechange',changed);reject(new Error('Update install failed'));}
+        else if(['installed','activated'].includes(worker.state))finish();
+      };
+      const timer=setTimeout(()=>{worker.removeEventListener('statechange',changed);reject(new Error('Update timeout'));},25000);
+      worker.addEventListener('statechange',changed);changed();
+    });
+  }
+  async function checkUpdate(manual=false){
+    if(checking||applyingUpdate||(!manual&&Date.now()-lastCheck<60000))return;
+    checking=true;lastCheck=Date.now();$('checkUpdate').disabled=true;$('checkUpdate').textContent='確認中…';
+    try{
+      status('更新を確認中…');await registrationReady;await registration.update();
+      await waitForInstall(registration.installing);
+      // Allow Safari to expose the newly installed waiting worker.
+      await new Promise(resolve=>setTimeout(resolve,0));offerUpdate();
+      if(!registration.waiting&&!registration.installing)status('最新バージョンです · オフラインで利用できます');
+    }catch{status('更新を確認できませんでした。通信を確認してもう一度お試しください。');}
+    finally{checking=false;$('checkUpdate').disabled=false;$('checkUpdate').textContent='更新を確認';}
+  }
+  $('checkUpdate').onclick=()=>checkUpdate(true);
+  $('settingsOpen').addEventListener('click',()=>checkUpdate());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate();});
   $('applyUpdate').onclick=()=>{
     if(playing||active.size){toast('発音とメトロノームを停止してから更新してください。');return;}
-    if(waitingWorker){applyingUpdate=true;waitingWorker.postMessage('APPLY_UPDATE');}
+    const worker=registration?.waiting;
+    if(!worker){checkUpdate(true);return;}
+    applyingUpdate=true;persist();$('applyUpdate').disabled=true;$('checkUpdate').disabled=true;
+    $('applyUpdate').textContent='更新中…';status('更新を適用しています…');
+    // controllerchange is the primary signal; the active worker check is a fallback
+    // for a missed event on a suspended iPhone / Home Screen session.
+    worker.addEventListener('statechange',()=>{if(worker.state==='activated')setTimeout(reloadUpdated,150);});
+    worker.postMessage('APPLY_UPDATE');
+    setTimeout(()=>{
+      if(reloading)return;
+      if(worker.state==='activated'||registration.active===worker)reloadUpdated();
+      else{applyingUpdate=false;$('applyUpdate').disabled=false;$('checkUpdate').disabled=false;$('applyUpdate').textContent='更新を適用';status('更新を完了できませんでした。もう一度お試しください。');}
+    },8000);
   };
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(applyingUpdate)location.reload();});
-  navigator.serviceWorker.register('./sw.js').then(async registration=>{
-    if(registration.active)$('offlineStatus').textContent='オフラインで利用できます';
-    offerUpdate(registration);
-    function watchInstall(){const worker=registration.installing;worker?.addEventListener('statechange',()=>{
-      if(worker.state==='installed'){$('offlineStatus').textContent='オフラインで利用できます';offerUpdate(registration);}
-      if(worker.state==='redundant')$('offlineStatus').textContent='オンラインで利用中';
-    });}
-    watchInstall();registration.addEventListener('updatefound',watchInstall);
-  }).catch(()=>$('offlineStatus').textContent='オンラインで利用中');
-}else $('offlineStatus').textContent=localPreview?'ローカルプレビューを表示中':'このブラウザではオンラインでご利用ください';
+  navigator.serviceWorker.addEventListener('controllerchange',reloadUpdated);
+}else{
+  $('offlineStatus').textContent=localPreview?'ローカルプレビューを表示中':'このブラウザではオンラインでご利用ください';
+  $('checkUpdate').hidden=true;
+}
 
 // One shared settings sheet for sound, metronome, balance and appearance.
 for(const dialog of [$('settingsDialog')]){

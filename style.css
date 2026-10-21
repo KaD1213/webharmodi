@@ -174,3 +174,7 @@ html[data-theme="dark"] .tap:active{background:#354e6c;box-shadow:none}
 @media(max-width:700px) and (orientation:landscape){#panel-metronome{gap:10px}.tempo-control{width:100px}.metronome-main{gap:8px}}
 .metronome-main .mechanism{height:min(360px,calc(100dvh - 150px));align-self:center}
 .rhythm-mode{padding:10px 6px}.rhythm-mode b{white-space:nowrap}
+.app-update{margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
+.app-update .offline-status{margin:0;line-height:1.6}
+.update-actions{display:flex;gap:16px;flex-wrap:wrap}.update-actions .text-button{padding-left:0}
+.app-update small{display:block;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
