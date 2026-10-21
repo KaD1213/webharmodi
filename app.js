@@ -3,7 +3,7 @@ import {AdaptiveJustIntonation, applyJustIntonation} from './adaptive-ji.mjs';
 import {TapTempo} from './tap-tempo.mjs';
 import {pendulumAngleAtPhase} from './pendulum-motion.mjs';
 const $=id=>document.getElementById(id);
-const designs=[['default','標準','iPhone風'],['studio','Studio','機材のような精密さ'],['modern','Modern','すっきり、モダン'],['paper','Paper','あたたかな紙の質感']];
+const designs=[['default','標準'],['studio','Studio'],['modern','Modern'],['paper','Paper']];
 let designPreference='default';
 try{const savedDesign=localStorage.getItem('webharmodi-design');if(designs.some(([id])=>id===savedDesign))designPreference=savedDesign;}catch{}
 const themeQuery=window.matchMedia('(prefers-color-scheme: dark)');
@@ -592,9 +592,9 @@ for(const dialog of [$('settingsDialog')]){
   const appearance=document.createElement('details');appearance.className='appearance-settings';
   appearance.innerHTML='<summary>デザイン<span class="design-current"></span></summary><div class="design-picker" role="group" aria-label="デザインテーマ"></div><div class="appearance-label">明るさ</div><div class="color-picker" role="group" aria-label="ライトとダーク"></div>';
   const picker=appearance.querySelector('.design-picker');
-  for(const [id,name,description]of designs){
+  for(const [id,name]of designs){
     const button=document.createElement('button');button.className='design-choice';button.dataset.designChoice=id;
-    button.innerHTML='<span class="design-swatch swatch-'+id+'" aria-hidden="true"><i></i><i></i><i></i></span><span class="design-name">'+name+'</span><small>'+description+'</small>';
+    button.innerHTML='<span class="design-swatch swatch-'+id+'" aria-hidden="true"><i></i><i></i><i></i></span><span class="design-name">'+name+'</span>';
     button.onclick=()=>{designPreference=id;try{localStorage.setItem('webharmodi-design',id);}catch{}syncTheme();};picker.append(button);
   }
   for(const [id,label]of [['system','端末に合わせる'],['light','ライト'],['dark','ダーク']]){
