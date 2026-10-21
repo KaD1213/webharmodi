@@ -18,7 +18,7 @@ jobs:
   deploy:
     environment:
       name: github-pages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Check out the repository
         uses: actions/checkout@v6
@@ -33,4 +33,5 @@ jobs:
       - name: Deploy the site
         id: deployment
         uses: actions/deploy-pages@v4
+
 
