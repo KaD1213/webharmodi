@@ -1,0 +1,93 @@
+/* Appearance controls stay compact and are available in either settings sheet. */
+.appearance-settings{margin-top:14px;border-radius:12px;background:#fff;padding:0 14px}
+.appearance-settings>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:48px;cursor:pointer;font-size:14px;list-style:none}
+.appearance-settings>summary::-webkit-details-marker{display:none}
+.design-current{margin-left:auto;color:var(--muted);font-size:12px}
+.appearance-settings>summary::after{content:'›';color:var(--muted);font-size:20px;transform:rotate(90deg)}
+.appearance-settings[open]>summary::after{transform:rotate(-90deg)}
+.design-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:6px 0 14px}
+.design-choice{display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:8px;border:1.5px solid transparent;background:#f4f4f8;text-align:left;border-radius:10px;min-width:0}
+.design-choice[aria-pressed=true]{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.design-name{font-size:12px;font-weight:650;line-height:1.4}
+.design-choice small{font-size:10px;color:var(--muted);font-weight:400;line-height:1.4}
+.design-swatch{height:42px;display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:4px;padding:6px;border-radius:5px;background:var(--swatch-bg)}
+.design-swatch i{display:block;border-radius:3px;background:var(--swatch-panel);border:1px solid var(--swatch-border)}
+.design-swatch i:nth-child(2){background:var(--swatch-accent);border-color:transparent}
+.swatch-default{--swatch-bg:#e5e5ec;--swatch-panel:#fff;--swatch-border:#d7d7de;--swatch-accent:#007aff}
+.swatch-studio{--swatch-bg:#142123;--swatch-panel:#273739;--swatch-border:#4b6162;--swatch-accent:#58d3b2}
+.swatch-modern{--swatch-bg:#f1eee7;--swatch-panel:#fffdf8;--swatch-border:#d6cfc1;--swatch-accent:#b85838}
+.swatch-paper{--swatch-bg:#eee4cc;--swatch-panel:#fffaf0;--swatch-border:#cdbfa3;--swatch-accent:#746b4d}
+.appearance-label{font-size:11px;color:var(--muted);margin-bottom:7px}
+.color-picker{display:flex;gap:3px;padding:3px;margin-bottom:14px;border-radius:8px;background:#ededf2}
+.color-picker button{flex:1;min-width:0;min-height:32px;padding:5px 2px;font-size:11px;font-weight:500;background:transparent;border-radius:6px}
+.color-picker button[aria-pressed=true]{background:#fff;box-shadow:0 1px 4px #0002}
+html[data-theme=dark] .appearance-settings{background:#282a32}
+html[data-theme=dark] .design-choice{background:#333640}
+html[data-theme=dark] .color-picker{background:#202229}
+html[data-theme=dark] .color-picker button{background:transparent}
+html[data-theme=dark] .color-picker button[aria-pressed=true]{background:#484b55}
+
+/* Studio: quiet instrument panels, green indicators and a precise numeric face. */
+html[data-design=studio]{--page:#e7eceb;--panel:#f5f8f7;--raised:#fff;--recess:#dce4e2;--ink:#172a29;--muted:#607773;--edge:#bccbc7;--accent:#006e5b;--tint:#c9e8de;--on-accent:#fff;--radius:6px;--key-white:#f1f5f2;--key-edge:#b7c6c0;--blue:var(--accent);--line:var(--edge)}
+html[data-design=studio][data-theme=dark]{--page:#101a1b;--panel:#1a292b;--raised:#233638;--recess:#122022;--ink:#e2eeea;--muted:#a3bab4;--edge:#3a5552;--accent:#77dfbf;--tint:#294b42;--on-accent:#10221c;--key-white:#d8e3dc;--key-edge:#889e94}
+/* Modern: warm neutrals, bold outlines and a restrained terracotta accent. */
+html[data-design=modern]{--page:#f7f5f0;--panel:#fffefa;--raised:#fff;--recess:#efebe2;--ink:#29231e;--muted:#786b5f;--edge:#d8cfc3;--accent:#a6462d;--tint:#f5ddd2;--on-accent:#fff;--radius:15px;--key-white:#fffdf7;--key-edge:#cfc5b7;--blue:var(--accent);--line:var(--edge)}
+html[data-design=modern][data-theme=dark]{--page:#1d1b19;--panel:#292622;--raised:#35302a;--recess:#201e1a;--ink:#f3ece1;--muted:#b8a99a;--edge:#554b40;--accent:#f5ac8b;--tint:#50372c;--on-accent:#291b13;--key-white:#e8e0d2;--key-edge:#a29888}
+/* Paper: a notebook palette, fine rules and ink-like controls. */
+html[data-design=paper]{--page:#f4eddd;--panel:#fffaf0;--raised:#fffdf6;--recess:#eae1cc;--ink:#3e4236;--muted:#77735f;--edge:#cfc4aa;--accent:#515c43;--tint:#dce2ca;--on-accent:#fffdf5;--radius:4px;--key-white:#fffaf0;--key-edge:#c8bea9;--blue:var(--accent);--line:var(--edge)}
+html[data-design=paper][data-theme=dark]{--page:#242019;--panel:#302c22;--raised:#3b372a;--recess:#262319;--ink:#eee6cf;--muted:#bfb498;--edge:#5d5541;--accent:#c7d39e;--tint:#434d32;--on-accent:#242a1a;--key-white:#e8dfc8;--key-edge:#a3977d}
+
+/* All musical hit areas and keyboard proportions are shared across designs. */
+html[data-design]:not([data-design=default]){color:var(--ink);background:var(--page)}
+html[data-design]:not([data-design=default]) :is(body,main,.rotate-prompt){background:var(--page);color:var(--ink)}
+html[data-design]:not([data-design=default]) :is(h1,h2,.tempo-number input){color:var(--ink)}
+html[data-design]:not([data-design=default]) :is(.card,.controls,dialog,.appearance-settings){background:var(--panel);color:var(--ink);border:1px solid var(--edge);border-radius:var(--radius);box-shadow:none}
+html[data-design]:not([data-design=default]) button{color:var(--ink);background:var(--recess);border-radius:calc(var(--radius) * .65)}
+html[data-design]:not([data-design=default]) :is(.tabs,.segments,.color-picker){background:var(--recess);border-radius:calc(var(--radius) * .75)}
+html[data-design]:not([data-design=default]) :is(.tabs button,.segments button,.color-picker button){background:transparent}
+html[data-design]:not([data-design=default]) :is(.tabs button[aria-selected=true],.segments button.active,.color-picker button[aria-pressed=true]){background:var(--raised);color:var(--ink);box-shadow:0 0 0 1px var(--edge)}
+html[data-design]:not([data-design=default]) :is(.voice-grid button.active,.hold.active,.rhythm-mode[aria-pressed=true]){background:var(--tint);color:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+html[data-design]:not([data-design=default]) :is(.control>label,.keyboard-top span,.volume-row output,.tempo-number>span,.scale,.key-note,.hold b,#octLabel){color:var(--muted)}
+html[data-design]:not([data-design=default]) :is(.icon-button,.app-actions .icon-button,.text-button,.dialog-head button){background:transparent;color:var(--accent);box-shadow:none}
+html[data-design]:not([data-design=default]) .app-actions #fullscreen[aria-pressed=true]{background:var(--tint)}
+html[data-design]:not([data-design=default]) :is(.keyboard-card,.range-nav){background:var(--recess);border-color:var(--edge)}
+html[data-design]:not([data-design=default]) .range-nav>button{background:var(--raised);color:var(--ink)}
+html[data-design]:not([data-design=default]) .key.white{background:var(--key-white);border-color:var(--key-edge);box-shadow:inset 0 -3px 0 var(--edge)}
+html[data-design]:not([data-design=default]) .key{border-radius:0 0 3px 3px}
+html[data-design]:not([data-design=default]) .key.black{background:#22272a;border-color:#101214;box-shadow:inset 0 -3px 0 #101214}
+html[data-design]:not([data-design=default]) .key.white.sounding{background:var(--tint);box-shadow:inset 0 -3px 0 var(--accent)}
+html[data-design]:not([data-design=default]) .key.black.sounding{background:var(--accent);box-shadow:inset 0 -3px 0 var(--ink)}
+html[data-design]:not([data-design=default]) .key-note{color:#6a6b62}
+html[data-design]:not([data-design=default]) .key.white.sounding .key-note{color:var(--ink)}
+html[data-design]:not([data-design=default]) .range-overview input#rangeSlider::-webkit-slider-thumb{border-color:var(--accent)}
+html[data-design]:not([data-design=default]) .range-overview input#rangeSlider::-moz-range-thumb{border-color:var(--accent)}
+html[data-design]:not([data-design=default]) .body-shape{background:var(--recess)}
+html[data-design]:not([data-design=default]) .metronome-foot{background:var(--edge)}
+html[data-design]:not([data-design=default]) .tempo-weight{background:var(--raised);border-color:var(--muted)}
+html[data-design]:not([data-design=default]) .tempo-weight::after{background:var(--accent)}
+html[data-design]:not([data-design=default]) .beat-dots .dot.lit{background:var(--accent)}
+html[data-design]:not([data-design=default]) .play{background:var(--accent);color:var(--on-accent)}
+html[data-design]:not([data-design=default]) .play.playing{background:var(--tint);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+html[data-design]:not([data-design=default]) .tap{background:var(--raised);color:var(--accent);border-color:var(--accent);box-shadow:0 2px 0 var(--edge)}
+html[data-design]:not([data-design=default]) :is(.tap:active,.design-choice[aria-pressed=true]){background:var(--tint)}
+html[data-design]:not([data-design=default]) .setting-list{background:var(--recess);border-radius:var(--radius)}
+html[data-design]:not([data-design=default]) .setting-list :is(select,input[type=number]){color:var(--accent)}
+html[data-design]:not([data-design=default]) .design-choice{background:var(--raised);border-radius:8px}
+html[data-design]:not([data-design=default]) .design-choice[aria-pressed=true]{box-shadow:0 0 0 1px var(--accent);border-color:var(--accent);background:var(--tint)}
+html[data-design]:not([data-design=default]) :is(#fullscreenHelp p,.rotate-prompt h2){color:var(--muted)}
+html[data-design]:not([data-design=default]):fullscreen{background:var(--page)}
+html[data-design]:not([data-design=default]):-webkit-full-screen{background:var(--page)}
+html[data-design=studio]:not([data-design=default]) .tempo-number input{font-family:"SFMono-Regular",Consolas,monospace;font-size:56px;font-weight:500;letter-spacing:-4px}
+html[data-design=studio]:not([data-design=default]) .controls{box-shadow:inset 0 2px 0 var(--raised)}
+html[data-design=studio]:not([data-design=default]) .appbar h1{letter-spacing:-.6px}
+html[data-design=modern]:not([data-design=default]) :is(.card,.controls){box-shadow:0 4px 0 var(--recess)}
+html[data-design=modern]:not([data-design=default]) .tabs button[aria-selected=true]{background:var(--ink);color:var(--page);box-shadow:none}
+html[data-design=modern]:not([data-design=default]) .tempo-number input{font-weight:500;letter-spacing:-4px}
+html[data-design=paper]:not([data-design=default]) .appbar h1{font-family:Georgia,"Noto Serif",serif;letter-spacing:-1px}
+html[data-design=paper]:not([data-design=default]) .controls{background-image:repeating-linear-gradient(transparent 0 23px,color-mix(in srgb,var(--edge) 36%,transparent) 23px 24px);background-size:100% 24px}
+html[data-design=paper]:not([data-design=default]) .controls :is(.segments,.voice-grid button,.hold){background:var(--panel)}
+html[data-design=paper]:not([data-design=default]) .controls :is(.voice-grid button.active,.hold.active){background:var(--tint)}
+@media(max-width:680px) and (orientation:landscape){html[data-design=studio]:not([data-design=default]) .tempo-number input{font-size:46px}}
+
+html[data-theme=dark] .range-overview input#rangeSlider::-webkit-slider-runnable-track{background:transparent;height:100%;border-radius:0}
+html[data-theme=dark] .range-overview input#rangeSlider::-moz-range-track{background:transparent;height:100%;border-radius:0}

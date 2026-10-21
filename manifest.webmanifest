@@ -1,1 +1,31 @@
-{"name":"WebHarmoDi.","short_name":"WebHarmoDi.","start_url":"./","scope":"./","display":"standalone","orientation":"landscape","background_color":"#f2f2f7","theme_color":"#f2f2f7"}
+{
+  "name": "WebHarmoDi.",
+  "short_name": "WebHarmoDi.",
+  "description": "吹奏楽の合奏に使える、基準音・純正律・メトロノーム。",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
