@@ -55,6 +55,8 @@ function persist(){
   try{localStorage.setItem('webharmodi-settings',JSON.stringify({...musical,contextKey,contextMode,keepAwake,viewIndex}));}catch{}
 }
 let ctx,master,metroMaster,playing=false,timer,nextTime=0,tick=0,generation=0;
+let pendulumFrames=[],pendulumRAF=0,pendulumAngle=0;
+const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 function balanceGains(){
   const position=(state.balance+100)/200;
   // Equal-power crossfade: keep the combined energy steady while moving the mix.
@@ -268,10 +270,14 @@ function clickAt(time,level,strong){if(level<=0)return;const o=ctx.createOscilla
 function scheduler(){
   // A blocked main thread must not replay a backlog of clicks all at once.
   if(playing&&nextTime<ctx.currentTime-.05)nextTime=ctx.currentTime+.015;
-  while(playing&&nextTime<ctx.currentTime+.12){const sub=tick%12,beat=Math.floor(tick/12)%state.beats;if(sub%(12/state.rhythmMode)===0)clickAt(nextTime,.8,state.accent&&beat===0&&sub===0);if(sub===0){const gen=generation;const id=setTimeout(()=>{visualTimers.delete(id);if(gen!==generation)return;document.querySelectorAll('.dot').forEach((el,i)=>el.classList.toggle('lit',i===beat));},Math.max(0,(nextTime-ctx.currentTime)*1000));visualTimers.add(id);}tick++;nextTime+=60/state.bpm/12;}
+  while(playing&&nextTime<ctx.currentTime+.12){const sub=tick%12,beat=Math.floor(tick/12)%state.beats;
+    // Share the audio scheduler's phase, including tempo changes between beats.
+    pendulumFrames.push({time:nextTime,phase:tick/12});
+    if(pendulumFrames.length>256)pendulumFrames.splice(0,pendulumFrames.length-256);
+    if(sub%(12/state.rhythmMode)===0)clickAt(nextTime,.8,state.accent&&beat===0&&sub===0);if(sub===0){const gen=generation;const id=setTimeout(()=>{visualTimers.delete(id);if(gen!==generation)return;document.querySelectorAll('.dot').forEach((el,i)=>el.classList.toggle('lit',i===beat));},Math.max(0,(nextTime-ctx.currentTime)*1000));visualTimers.add(id);}tick++;nextTime+=60/state.bpm/12;}
 }
-function startMetro(){if(playing)return;try{audio();}catch(error){toast(error.message);return;}playing=true;generation++;tick=0;nextTime=ctx.currentTime+.05;timer=setInterval(scheduler,25);scheduler();$('play').textContent='停止';$('play').classList.add('playing');$('play').setAttribute('aria-pressed','true');$('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム（再生中）');syncWakeLock();}
-function stopMetro(){playing=false;generation++;clearInterval(timer);visualTimers.forEach(clearTimeout);visualTimers.clear();scheduled.forEach(o=>{try{o.stop();}catch{}});scheduled.clear();$('play').textContent='開始';$('play').classList.remove('playing');$('play').setAttribute('aria-pressed','false');$('tab-metronome').dataset.active='false';$('tab-metronome').setAttribute('aria-label','メトロノーム');document.querySelectorAll('.dot').forEach(el=>el.classList.remove('lit'));syncWakeLock();}
+function startMetro(){if(playing)return;try{audio();}catch(error){toast(error.message);return;}playing=true;generation++;tick=0;pendulumFrames=[];nextTime=ctx.currentTime+.05;timer=setInterval(scheduler,25);scheduler();startPendulum();$('play').textContent='停止';$('play').classList.add('playing');$('play').setAttribute('aria-pressed','true');$('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム（再生中）');syncWakeLock();}
+function stopMetro(){playing=false;stopPendulum();generation++;clearInterval(timer);visualTimers.forEach(clearTimeout);visualTimers.clear();scheduled.forEach(o=>{try{o.stop();}catch{}});scheduled.clear();$('play').textContent='開始';$('play').classList.remove('playing');$('play').setAttribute('aria-pressed','false');$('tab-metronome').dataset.active='false';$('tab-metronome').setAttribute('aria-label','メトロノーム');document.querySelectorAll('.dot').forEach(el=>el.classList.remove('lit'));syncWakeLock();}
 function drawDots(){$('beatDots').innerHTML='<span class="dot"></span>'.repeat(state.beats);}
 function setBpm(n,{fromTap=false}={}){
   if(!fromTap)tapTempo.reset();
@@ -341,32 +347,63 @@ syncFullscreen();
 // Keep the native range for keyboard / assistive input, not invisible touch geometry.
 const tempoRail=$('tempoRail'),visibleWeight=$('visibleTempoWeight');
 let weightDrag=null;
-function moveWeight(clientY){
-  const rect=tempoRail.getBoundingClientRect();
-  if(rect.height<=0)return;
-  const fraction=Math.max(0,Math.min(1,(clientY-weightDrag.offset-rect.top)/rect.height));
+function setPendulumAngle(angle){pendulumAngle=angle;tempoRail.style.setProperty('--pendulum-angle',angle+'deg');}
+function audibleTime(){
+  const stamp=ctx.getOutputTimestamp?.();
+  if(stamp?.performanceTime>0&&stamp.contextTime>0)return Math.min(ctx.currentTime,stamp.contextTime+Math.max(0,(performance.now()-stamp.performanceTime)/1000));
+  return Math.max(0,ctx.currentTime-(ctx.outputLatency||0));
+}
+function paintPendulum(){
+  if(!playing)return;
+  const now=audibleTime();
+  while(pendulumFrames.length>1&&pendulumFrames[1].time<=now)pendulumFrames.shift();
+  const from=pendulumFrames[0],to=pendulumFrames[1];
+  if(from&&!weightDrag&&!$('panel-metronome').hidden){
+    const phase=now<from.time?from.phase:to?from.phase+(to.phase-from.phase)*(now-from.time)/(to.time-from.time):from.phase+(now-from.time)*state.bpm/60;
+    // Each quarter-note click lands at the opposite end; subdivisions do not speed up the arm.
+    setPendulumAngle(-(reducedMotion.matches?6:18)*Math.cos(Math.PI*phase));
+  }
+  pendulumRAF=requestAnimationFrame(paintPendulum);
+}
+function startPendulum(){cancelAnimationFrame(pendulumRAF);tempoRail.classList.add('swaying');paintPendulum();}
+function stopPendulum(){cancelAnimationFrame(pendulumRAF);pendulumRAF=0;pendulumFrames=[];tempoRail.classList.remove('swaying');if(!weightDrag)setPendulumAngle(0);}
+function railPosition(clientX,clientY){
+  // offset geometry is unrotated. Invert the visible arm's rotation around its pivot.
+  const parent=tempoRail.offsetParent.getBoundingClientRect();
+  const transform=getComputedStyle(tempoRail).transform;
+  const matrix=transform==='none'?{a:1,b:0}:new DOMMatrixReadOnly(transform);
+  const dx=clientX-parent.left-tempoRail.offsetLeft-tempoRail.offsetWidth/2;
+  const dy=clientY-parent.top-tempoRail.offsetTop-tempoRail.offsetHeight;
+  return {y:-matrix.b*dx+matrix.a*dy+tempoRail.offsetHeight,height:tempoRail.offsetHeight,angle:Math.atan2(matrix.b,matrix.a)*180/Math.PI};
+}
+function moveWeight(clientX,clientY){
+  const point=railPosition(clientX,clientY);
+  if(point.height<=0)return;
+  const fraction=Math.max(0,Math.min(1,(point.y-weightDrag.offset)/point.height));
   const index=Math.round(fraction*(tempoMarks.length-1));
   setBpm(tempoMarks[index]);
 }
 tempoRail.onpointerdown=e=>{
   if(e.button!==0||weightDrag)return;
   e.preventDefault();
-  const rect=tempoRail.getBoundingClientRect();
-  const center=visibleWeight.getBoundingClientRect().top+visibleWeight.getBoundingClientRect().height/2;
+  const point=railPosition(e.clientX,e.clientY);
+  const center=parseFloat(tempoRail.style.getPropertyValue('--tempo-pos'))*point.height;
   // Preserve where the finger grabbed the weight; no initial jump.
   const grabbedWeight=e.target===visibleWeight||visibleWeight.contains(e.target);
-  weightDrag={id:e.pointerId,offset:grabbedWeight?e.clientY-center:0};
+  weightDrag={id:e.pointerId,offset:grabbedWeight?point.y-center:0};
+  tempoRail.classList.add('adjusting');setPendulumAngle(point.angle);
   tempoRail.setPointerCapture(e.pointerId);
   tempoRail.classList.add('dragging');
-  if(!grabbedWeight)moveWeight(e.clientY);
+  if(!grabbedWeight)moveWeight(e.clientX,e.clientY);
 };
 tempoRail.onpointermove=e=>{
   if(weightDrag?.id!==e.pointerId)return;
-  e.preventDefault();moveWeight(e.clientY);
+  e.preventDefault();moveWeight(e.clientX,e.clientY);
 };
 function finishWeightDrag(e){
   if(weightDrag?.id!==e.pointerId)return;
-  weightDrag=null;tempoRail.classList.remove('dragging');
+  weightDrag=null;tempoRail.classList.remove('dragging','adjusting');
+  if(!playing)setPendulumAngle(0);
 }
 tempoRail.onpointerup=finishWeightDrag;
 tempoRail.onpointercancel=finishWeightDrag;

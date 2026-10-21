@@ -151,3 +151,8 @@ html[data-theme="dark"] .tap:active{background:#354e6c;box-shadow:none}
 .balance-footer .text-button{font-size:12px;min-height:32px}
 .balance-hint{font-size:11px;color:var(--muted);margin:7px 3px 0}
 @media(max-width:600px){.settings-grid{grid-template-columns:minmax(0,1fr);gap:16px}}
+
+/* The arm, weight and hit area rotate together around the fixed lower pivot. */
+.rail{transform-origin:50% 100%;transform:rotate(var(--pendulum-angle,0deg));transition:transform .16s ease-out}
+.rail.swaying,.rail.adjusting{transition:none;will-change:transform}
+.rail::after{content:"";position:absolute;left:50%;bottom:-4px;width:8px;height:8px;transform:translateX(-50%);border-radius:50%;background:var(--muted);pointer-events:none}
