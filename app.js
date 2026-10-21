@@ -322,8 +322,6 @@ $('contextKey').value=contextKey;$('contextMode').value=contextMode;$('accent').
 syncBalance();
 $('keepAwake').checked=keepAwake;
 drawControls();drawDots();renderNotes();drawRhythmModes();drawTempoScale();setBpm(state.bpm);setRange(viewIndex);
-const portraitGate=window.matchMedia?.('(orientation: portrait) and (max-width: 600px)');
-portraitGate?.addEventListener('change',e=>{if(e.matches){stopNotes();stopMetro();}});
 // Fullscreen must be requested directly from a user gesture. Never fake browser fullscreen.
 function syncFullscreen(){
   const full=Boolean(document.fullscreenElement||document.webkitFullscreenElement);
