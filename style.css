@@ -329,7 +329,8 @@ h1{letter-spacing:0}.tempo-number input{letter-spacing:-3px}
 .key-note{font-size:11px;opacity:1;color:#636366}html[data-theme=dark] .key-note{color:#48484a}
 .tuner-hint,.offline-status,.app-update small,.keyboard-top span,.midi-setting small,.balance-hint,.channel label{font-size:12px}
 .icon-button::after,.range-nav>button::after{content:"";position:absolute;inset:-6px}.icon-button,.range-nav>button{position:relative}
-.voice-grid{grid-template-columns:repeat(5,1fr)}
+.voice-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+.voice-grid button{width:100%;min-width:0;height:44px;min-height:44px;padding:0 4px;box-sizing:border-box}
 .hint-small{display:block;margin-top:6px;font-size:12px;color:var(--muted);line-height:1.5}
 #fullscreen[hidden]{display:none!important}#themeToggle{display:none}
 /* motion */

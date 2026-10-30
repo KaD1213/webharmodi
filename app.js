@@ -680,11 +680,6 @@ syncAppearanceUI();
   const root=document.documentElement,installed=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
   if(installed||!(root.requestFullscreen||root.webkitRequestFullscreen))$('fullscreen').hidden=true;
 
-  // Instrument names under the transposition control.
-  const names={0:'フルート・オーボエ・ファゴット・トロンボーン・ユーフォ・チューバ・ピアノ',[-2]:'トランペット・クラリネット・テナーサックス・ソプラノサックス',3:'アルトサックス・バリトンサックス',5:'ホルン'};
-  const showNames=()=>{$('transposeNames').textContent='選択中：'+(names[state.transpose]||'');};
-  const baseDraw=drawControls;drawControls=function(){baseDraw();showNames();};showNames();
-
   // Both selectors reflect the same explicit, persisted meter state.
   $('meterPreset').onchange=e=>setMeter(e.target.value?Number(e.target.value)*3+'/8':'4');
   syncMeterControls();
