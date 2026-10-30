@@ -20,8 +20,8 @@ function append(f,dt){
  const p={...reading(f),frequency:f,t:elapsed,connect:connected};
  if(points.length&&p.nearest!==points.at(-1).nearest)p.connect=false;
  points.push(p);elapsed+=dt;connected=true;
- // Keep only the latest five seconds of voiced measurements.
- while(points.length&&p.t-points[0].t>5)points.shift();
+ // Keep only the latest eight seconds of voiced measurements.
+ while(points.length&&p.t-points[0].t>8)points.shift();
  showReading(p);draw();
 }
 function setup(c,w,h){
@@ -38,7 +38,7 @@ function draw(){
  const fg=dark?'#afb6c2':'#646b77',line=dark?'#343b46':'#e1e4e9',accent=dark?'#8ab4f8':'#007aff';
  const g=setup(canvas,w,h),a=setup(axis,54,h);
  const headX=connected?w/2:w-16;
- const y=cents=>22+(50-cents)/100*(h-44),x=t=>headX-(newest-t)/5*Math.max(1,headX-12);
+ const y=cents=>22+(50-cents)/100*(h-44),x=t=>headX-(newest-t)/8*Math.max(1,headX-12);
  g.font='10px -apple-system,sans-serif';a.font='11px -apple-system,sans-serif';
  for(const cents of [-50,-25,0,25,50]){
   g.strokeStyle=cents===0?(dark?'#5caf9a':'#469d81'):line;
