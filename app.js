@@ -326,7 +326,20 @@ document.addEventListener('keyup',e=>unpress('k'+e.code));window.addEventListene
 document.addEventListener('keydown',e=>{if(e.code==='Escape'){stopNotes();stopMetro();}});
 // Native range keeps dragging, touch and keyboard access in sync with BPM.
 $('tempoWeight').oninput=e=>setBpm(tempoMarks[+e.target.value]);
+let betaEnabled=false;
+try{betaEnabled=localStorage.getItem('webharmodi-beta-features')==='true';}catch{}
+function syncBetaFeatures(){
+  $('betaFeatures').checked=betaEnabled;
+  if(!betaEnabled&&!$('panel-tuner').hidden)$('tab-harmony').click();
+  $('tab-tuner').hidden=!betaEnabled;
+}
+$('betaFeatures').onchange=e=>{
+  betaEnabled=e.target.checked;
+  try{localStorage.setItem('webharmodi-beta-features',String(betaEnabled));}catch{}
+  syncBetaFeatures();
+};
 for(const view of ['harmony','metronome','tuner'])$('tab-'+view).onclick=()=>{
+  if(view==='tuner'&&!betaEnabled)return;
   for(const name of ['harmony','metronome','tuner']){
     const selected=name===view;
     $('tab-'+name).setAttribute('aria-selected',String(selected));
@@ -335,6 +348,7 @@ for(const view of ['harmony','metronome','tuner'])$('tab-'+view).onclick=()=>{
     if(selected&&name==='harmony')setRange(viewIndex);
   }
 };
+syncBetaFeatures();
 for(const id of ['reference','beats','clickVoice'])$(id).value=state[id==='reference'?'reference':id];
 $('contextKey').value=contextKey;$('contextMode').value=contextMode;$('accent').checked=state.accent;
 syncBalance();
@@ -454,7 +468,7 @@ window.addEventListener('pagehide',()=>{persist();stopNotes();stopMetro();});
 rangeSlider.addEventListener('change',persist);
 for(const tab of ['harmony','metronome','tuner'])$('tab-'+tab).addEventListener('keydown',e=>{
   if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-  e.preventDefault();const views=['harmony','metronome','tuner'];const target=e.key==='Home'?views[0]:e.key==='End'?views.at(-1):views[(views.indexOf(tab)+(e.key==='ArrowRight'?1:2))%views.length];
+  e.preventDefault();const views=['harmony','metronome','tuner'].filter(name=>!$('tab-'+name).hidden);const target=e.key==='Home'?views[0]:e.key==='End'?views.at(-1):views[(views.indexOf(tab)+(e.key==='ArrowRight'?1:views.length-1))%views.length];
   $('tab-'+target).click();$('tab-'+target).focus();
 });
 

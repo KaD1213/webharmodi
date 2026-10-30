@@ -377,3 +377,6 @@ dialog.closing{animation:sheet-down .28s cubic-bezier(.4,0,1,1) forwards}dialog.
 .app-actions .icon-button::after{content:none}
 .app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{position:relative;min-width:44px;width:44px;height:44px;min-height:44px;box-sizing:border-box}
 .app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{inset:auto;flex:0 0 44px}
+
+/* Beta-only tabs must stay hidden in every responsive layout. */
+.tabs button[hidden]{display:none!important}
