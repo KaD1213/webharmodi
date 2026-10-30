@@ -37,7 +37,7 @@ function draw(){
  const dark=document.documentElement.dataset.theme==='dark';
  const fg=dark?'#afb6c2':'#646b77',line=dark?'#343b46':'#e1e4e9',accent=dark?'#8ab4f8':'#007aff';
  const g=setup(canvas,w,h),a=setup(axis,54,h);
- const y=cents=>22+(50-cents)/100*(h-44),x=t=>12+(newest-t)/5*Math.max(1,w-24);
+ const y=cents=>22+(50-cents)/100*(h-44),x=t=>w/2-(newest-t)/5*Math.max(1,w/2-12);
  g.font='10px -apple-system,sans-serif';a.font='11px -apple-system,sans-serif';
  for(const cents of [-50,-25,0,25,50]){
   g.strokeStyle=cents===0?(dark?'#5caf9a':'#469d81'):line;
@@ -46,6 +46,9 @@ function draw(){
   a.fillStyle=fg;a.fillText(cents>0?'+'+cents:String(cents),3,y(cents)+4);
  }
  a.fillStyle=fg;a.fillText('cent',3,11);
+ // History moves left; only this layer is blurred during voiced input.
+ g.save();
+ if(connected){g.filter='blur(5px)';g.globalAlpha=.3;}
  g.strokeStyle=accent;g.lineWidth=2;g.lineJoin='round';g.lineCap='round';g.beginPath();
  for(let i=0;i<points.length;i++){
   const p=points[i];if(!p.connect||!i)g.moveTo(x(p.t),y(p.cents));else g.lineTo(x(p.t),y(p.cents));
@@ -55,12 +58,21 @@ function draw(){
  for(let i=0;i<points.length;i++)if(!points[i].connect||i===0){
   g.fillStyle=fg;g.fillText(noteName(points[i].nearest),x(points[i].t),13);
  }
- if(points.length){const p=points.at(-1);g.fillStyle=accent;g.beginPath();g.arc(x(p.t),y(p.cents),3,0,Math.PI*2);g.fill();}
+ g.restore();
+ if(points.length){
+  const p=points.at(-1),cx=w/2,cy=y(p.cents);
+  // The live marker stays horizontally fixed, moving only with pitch (vertical).
+  g.strokeStyle=accent;g.lineWidth=3;g.lineCap='round';
+  g.beginPath();g.moveTo(cx-14,cy);g.lineTo(cx+14,cy);g.stroke();
+  g.fillStyle=accent;g.beginPath();g.arc(cx,cy,4,0,Math.PI*2);g.fill();
+  g.font='bold 15px -apple-system,sans-serif';g.textAlign='center';
+  g.fillText(noteName(p.nearest),cx,16);
+ }
 }
 function stop(){
  run++;pending=false;clearInterval(timer);timer=null;
  stream?.getTracks().forEach(t=>t.stop());stream=null;source?.disconnect();source=null;
- audio?.close().catch(()=>{});audio=null;connected=false;last=0;
+ audio?.close().catch(()=>{});audio=null;connected=false;last=0;draw();
  $('tab-tuner').dataset.active='false';
  status(points.length?'計測を停止 · 軌跡を確認できます':'音を吹くと計測します');
 }
@@ -90,7 +102,7 @@ async function start(){
    const now=performance.now(),p=detectPitch(down,localAudio.sampleRate/2);
    const dt=last?Math.min((now-last)/1000,.12):.05;last=now;
    if(p){append(p.frequency,dt);status('計測中');}
-   else{connected=false;status(points.length?'音を待っています · 軌跡を保持中':'音を吹くと計測します');}
+   else{const wasConnected=connected;connected=false;if(wasConnected)draw();status(points.length?'音を待っています · 軌跡を保持中':'音を吹くと計測します');}
   },50);
  }catch(e){
   if(token!==run)return;stop();$('tunerRetry').hidden=false;
@@ -111,7 +123,7 @@ $('tunerDemo').onclick=()=>{
   if(i===70)connected=false;
   const cents=32*Math.exp(-(i%70)/8)+4*Math.sin(i*.24);
   append(442*2**(((i<70?69:70)-69)/12+cents/1200),.05);i++;
-  if(i===140){clearInterval(timer);timer=null;connected=false;status('サンプル表示 · 実際の計測ではありません');}
+  if(i===140){clearInterval(timer);timer=null;connected=false;draw();status('サンプル表示 · 実際の計測ではありません');}
  },50);
 };
 $('tab-tuner').addEventListener('click',()=>{draw();start();});
