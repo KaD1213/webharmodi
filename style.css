@@ -105,7 +105,7 @@ html[data-theme="dark"] .key.white.sounding .key-note{color:#e4efff}
 .appbar header{min-width:0}.appbar h1{white-space:nowrap;line-height:1.15}
 .appbar .tabs{width:100%;margin:0;min-width:0}
 .app-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px}
-.app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{position:static;width:36px;height:36px;min-height:36px;padding:6px;flex:none;border-radius:9px}
+.app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{position:relative;width:36px;height:36px;min-height:36px;padding:6px;flex:none;border-radius:9px}
 .app-actions svg,.app-actions #themeToggle svg,.app-actions #fullscreen svg{width:22px;height:22px}
 .app-actions .icon-button:hover{background:#007aff0c}
 .app-actions #fullscreen[aria-pressed=true]{background:#007aff18}
@@ -332,7 +332,7 @@ h1{letter-spacing:0}.tempo-number input{letter-spacing:-3px}
 .voice-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
 .voice-grid button{width:100%;min-width:0;height:44px;min-height:44px;padding:0 4px;box-sizing:border-box}
 .hint-small{display:block;margin-top:6px;font-size:12px;color:var(--muted);line-height:1.5}
-#fullscreen[hidden]{display:none!important}#themeToggle{display:none}
+#fullscreen[hidden]{display:none!important}
 /* motion */
 .tabs,.segments,.color-picker{position:relative}.tabs button,.segments button,.color-picker button{position:relative;z-index:1}
 .thumb{position:absolute;left:0;top:0;z-index:0;border-radius:calc(var(--radius,10px)*.7);background:var(--raised,#fff);box-shadow:0 1px 4px #0003;transition:transform .35s var(--ease),width .35s var(--ease),height .35s var(--ease),opacity .2s;pointer-events:none}
@@ -372,3 +372,8 @@ dialog.closing{animation:sheet-down .28s cubic-bezier(.4,0,1,1) forwards}dialog.
  .controls>.control:first-child,.controls>.control:nth-child(2),.controls>.tuning-row{grid-row:1;align-self:start}
  .controls>.tuning-row{align-items:stretch;gap:8px}
 }
+
+/* Keep header hit targets inside their own buttons. */
+.app-actions .icon-button::after{content:none}
+.app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{position:relative;min-width:44px;width:44px;height:44px;min-height:44px;box-sizing:border-box}
+.app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{inset:auto;flex:0 0 44px}
