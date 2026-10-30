@@ -361,3 +361,14 @@ dialog.closing{animation:sheet-down .28s cubic-bezier(.4,0,1,1) forwards}dialog.
 
 .meter-info{font-size:12px;color:var(--muted);margin:0 0 8px;text-align:center;line-height:1.5;grid-column:1/-1;grid-row:1}
 @media(orientation:portrait) and (max-width:600px){.tempo-control:has(.meter-info) .tempo-number{grid-row:2/5}.tempo-control:has(.meter-info) .tempo-nudge{grid-row:2}.tempo-control:has(.meter-info) .beat-dots{grid-row:3}.tempo-control:has(.meter-info) .tap{grid-row:4}}
+/* Align harmony labels and controls to a shared top edge and spacing. */
+.controls .control{min-width:0}
+.controls .control>label{display:block;font-size:12px;line-height:18px;min-height:18px;margin:0 0 8px}
+.controls .segments,.controls .voice-grid{box-sizing:border-box;padding:3px;margin:0;min-height:50px}
+.controls .segments button,.controls .voice-grid button{height:44px;min-height:44px;display:flex;align-items:center;justify-content:center;line-height:1.2}
+.controls .hold{height:44px;min-height:44px;margin:0}
+@media (orientation:landscape),(min-width:601px){
+ .controls{grid-template-rows:auto;align-items:start}
+ .controls>.control:first-child,.controls>.control:nth-child(2),.controls>.tuning-row{grid-row:1;align-self:start}
+ .controls>.tuning-row{align-items:stretch;gap:8px}
+}
