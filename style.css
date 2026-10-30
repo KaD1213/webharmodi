@@ -237,3 +237,126 @@ html[data-theme="dark"] .tap:active{background:#354e6c;box-shadow:none}
 @media (orientation:landscape){
   .tempo-weight{width:38px;height:20px}
 }
+/* Rehearsal workspace: a consistent layout shared by every appearance. */
+:root{--workspace-bg:#f4f5f7;--workspace-panel:#fff;--workspace-text:#191c22;--workspace-secondary:#646b77;--workspace-edge:#e1e4e9;--workspace-control:#eceff3}
+html[data-theme=dark]{--workspace-bg:#12151a;--workspace-panel:#1c2027;--workspace-text:#f3f5f8;--workspace-secondary:#afb6c2;--workspace-edge:#343b46;--workspace-control:#292f39}
+html:not([data-design]),html[data-design=default]{background:var(--workspace-bg);color:var(--workspace-text)}
+html:not([data-design]) body,html[data-design=default] body,html:not([data-design]) main,html[data-design=default] main{background:var(--workspace-bg);color:var(--workspace-text)}
+main{max-width:1280px;padding:20px 24px;height:100dvh;gap:0}
+.appbar{min-height:48px;margin-bottom:20px;grid-template-columns:1fr 300px 1fr;gap:24px}
+.appbar h1{font-size:23px;letter-spacing:-.8px}.app-actions{gap:5px}.app-actions .icon-button{min-width:40px;height:40px;min-height:40px}
+.tabs{padding:4px;border-radius:12px}.tabs button{min-height:36px;font-size:14px;border-radius:9px}
+.control>label{font-size:12px;font-weight:550;color:var(--workspace-secondary);margin-bottom:8px}
+.controls{background:transparent!important;padding:0 0 20px;border-radius:0;gap:12px 24px;border-bottom:1px solid var(--workspace-edge);grid-template-columns:1fr 1.5fr 1.15fr}
+.controls>.control:first-child{grid-row:1/3;align-self:center}.segments{padding:3px;border-radius:10px}.segments button{min-height:40px;font-size:14px}
+.voice-grid{gap:6px}.voice-grid button{min-height:38px;font-size:14px;border-radius:9px}.tuning-row{gap:8px}.hold{min-height:38px;height:38px;border-radius:9px;font-size:13px}.hold b{font-size:11px}
+#panel-harmony{justify-content:flex-end}.keyboard-top{margin:16px 2px 12px;min-height:30px}.keyboard-top strong{font-size:14px}.keyboard-top span{font-size:12px;color:var(--workspace-secondary)}
+.keyboard-card{height:clamp(180px,30vh,300px);max-height:calc(100dvh - 260px);min-height:130px;border-radius:12px;padding:0 5px 5px;box-shadow:0 2px 5px #00000008}
+.range-nav{height:42px;padding:5px 8px;gap:12px}.range-nav>button{width:34px;height:32px;min-height:32px;font-size:25px}.range-overview{height:24px;max-width:none}#octLabel{font-size:11px;min-width:60px}.key-note{font-size:11px;bottom:12px}
+#panel-metronome{display:grid;grid-template-columns:minmax(0,1fr) 200px;grid-template-rows:minmax(0,1fr);gap:24px;align-items:stretch}
+.metronome-card{background:transparent!important;border-radius:0;padding:0;min-height:0;gap:12px;display:grid;grid-template-rows:minmax(0,1fr) 52px}
+.metronome-main{min-height:0;height:100%;gap:20px;align-items:center}
+.metronome-main .mechanism{height:min(100%,360px);max-width:480px;align-self:center;flex:1}
+.tempo-control{width:180px;flex:none}.tempo-number input{font-size:88px;letter-spacing:-4px;font-weight:350;line-height:1.05}.tempo-number>span{font-size:11px;color:var(--workspace-secondary);letter-spacing:1.5px}
+.tempo-nudge{gap:16px;margin-top:18px}.tempo-nudge button{width:44px;height:44px;min-height:44px}.beat-dots{margin:16px 0;max-width:180px;min-height:9px}.tap{min-height:44px;width:132px;font-size:14px;border-radius:12px}
+.play{height:52px;min-height:52px;margin:0;border-radius:13px;font-size:17px;align-self:end}
+#panel-metronome>.mixer-title{display:none}.rhythm-modes{background:transparent!important;grid-template-columns:1fr;gap:10px;padding:0;align-content:center;border-left:1px solid var(--workspace-edge);padding-left:24px;border-radius:0;min-height:0}
+.rhythm-mode{min-height:72px;border-radius:13px;flex-direction:row;gap:14px;padding:12px;border-width:1px}.rhythm-mode b{font-size:13px}.rhythm-mode>span{height:34px;flex:none}.rhythm-mode svg{width:34px;height:34px}
+.tempo-weight{width:38px;height:20px}.rail .tempo-weight:before{inset:-13px -10px}
+#settingsDialog{border-radius:22px;padding:14px 24px 24px}.setting-list>label{font-size:14px;min-height:54px}.settings-section h3{font-size:13px}.balance-hint{font-size:12px}.text-button{min-height:44px}.settings-grid{gap:18px}
+@media (max-height:550px) and (orientation:landscape){
+ main{padding:8px max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left))}.appbar{min-height:36px;margin-bottom:10px;grid-template-columns:1fr minmax(220px,280px) 1fr;gap:12px}.appbar h1{font-size:20px}.tabs button{min-height:30px;padding:4px 10px;font-size:12px}.app-actions .icon-button,.app-actions #fullscreen,.app-actions #themeToggle{width:34px;min-width:34px;height:34px;min-height:34px;padding:6px}
+ .controls{padding-bottom:10px;gap:8px 16px}.control>label{font-size:11px;margin-bottom:5px}.segments button{min-height:34px;font-size:13px}.voice-grid button{min-height:30px;font-size:12px}.hold{height:30px;min-height:30px}.keyboard-top{margin:6px 2px;min-height:24px}.keyboard-card{height:calc(100dvh - 204px);max-height:none;min-height:110px}.range-nav{height:34px}.keyboard-top strong{font-size:12px}.keyboard-top span{font-size:10px}
+ #panel-metronome{grid-template-columns:minmax(0,1fr) 170px;gap:18px}.metronome-card{grid-template-rows:minmax(0,1fr) 44px;gap:8px}.tempo-control{width:140px}.tempo-number input{font-size:60px}.tempo-nudge{margin-top:10px}.tempo-nudge button{height:40px;width:40px;min-height:40px}.beat-dots{margin:8px 0}.tap{min-height:38px;width:120px}.play{min-height:44px;height:44px}.rhythm-modes{padding-left:18px;gap:6px}.rhythm-mode{min-height:50px;padding:6px 10px;gap:10px}.rhythm-mode b{font-size:12px}.rhythm-mode svg{width:30px}.metronome-main .mechanism{height:100%}
+}
+@media (orientation:portrait) and (max-width:600px){
+ main{height:auto;min-height:100svh;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+ .appbar{grid-template-columns:minmax(0,1fr) auto;gap:12px 6px;margin-bottom:20px}.appbar h1{font-size:22px}.app-actions{gap:0}.app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{width:36px;min-width:36px;min-height:40px;height:40px;padding:7px}.tabs button{min-height:38px;font-size:14px}
+ #panel-harmony{justify-content:flex-start}.controls{grid-template-columns:1fr;grid-template-rows:auto auto auto;gap:18px;padding-bottom:20px}.controls>.control:first-child{grid-column:1;grid-row:1;align-self:stretch}.controls>.control:nth-child(2){grid-column:1;grid-row:2}.controls>.tuning-row{grid-column:1;grid-row:3;align-items:end;gap:12px}.control>label{font-size:12px}.segments button{min-height:42px}.voice-grid button{min-height:42px}.hold{width:104px;min-width:104px;min-height:42px;height:42px}.keyboard-top{margin:14px 0 10px;min-height:26px}.keyboard-top>div:first-child{gap:9px;flex-wrap:wrap}.keyboard-top strong{font-size:13px}.keyboard-top span{font-size:11px}.keyboard-card{height:clamp(195px,28svh,260px);max-height:none;min-height:195px}.range-nav{height:40px;gap:8px;padding:4px}#octLabel{font-size:10px;min-width:48px}.key-note{font-size:10px}
+ #panel-metronome{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;gap:18px;flex:none}.metronome-card{grid-template-rows:auto 50px;gap:14px}.metronome-main{display:grid;grid-template-columns:1fr;grid-template-rows:clamp(220px,30svh,280px) auto;height:auto;gap:12px}.metronome-main .mechanism{width:100%;height:100%;max-width:none;align-self:stretch;min-width:0}.tempo-control{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;width:100%;align-items:center}.tempo-number{grid-column:1;grid-row:1/4}.tempo-number input{font-size:68px;letter-spacing:-3px}.tempo-nudge{grid-column:2;grid-row:1;margin:0;justify-content:center;gap:16px}.tempo-nudge button{width:44px;height:44px;min-height:44px}.beat-dots{grid-column:2;grid-row:2;justify-self:center;margin:3px 0}.tap{grid-column:2;grid-row:3;width:100%;min-height:42px}.play{height:50px;min-height:50px}.tempo-weight{width:36px;height:19px}
+ .rhythm-modes{grid-template-columns:1fr 1fr;gap:8px;border:0;border-top:1px solid var(--workspace-edge);padding:18px 0 0;align-content:start}.rhythm-mode{flex-direction:row;min-height:68px;gap:9px;padding:10px 6px}.rhythm-mode b{font-size:12px}.rhythm-mode svg{width:29px}.rhythm-mode>span{height:34px}.settings-grid{grid-template-columns:1fr}
+}
+@media (min-width:601px) and (orientation:portrait){#panel-metronome{flex:none;min-height:500px}#panel-harmony{justify-content:center}.keyboard-card{max-height:none}}
+#panel-metronome>.section-title.mixer-title{display:none}
+html:not([data-design]) .tempo-nudge button,html[data-design=default] .tempo-nudge button{background:var(--workspace-control)}
+html:not([data-theme=dark]):not([data-design]) .mechanism .body-shape,html:not([data-theme=dark])[data-design=default] .mechanism .body-shape{background:linear-gradient(110deg,#e8ebf0,#dce1e8)}
+html:not([data-theme=dark]):not([data-design]) .voice-grid button,html:not([data-theme=dark])[data-design=default] .voice-grid button{background:#e9edf2;color:#303946}
+html:not([data-theme=dark]):not([data-design]) .voice-grid button.active,html:not([data-theme=dark])[data-design=default] .voice-grid button.active{background:#e1eeff;color:#0063d4}
+/* Pitch history stays readable after the microphone falls silent. */
+.appbar{grid-template-columns:minmax(145px,1fr) minmax(330px,400px) minmax(120px,1fr)}
+.tabs button{white-space:nowrap;padding-left:8px;padding-right:8px}
+#panel-tuner{display:flex;flex-direction:column;flex:1;min-height:0;gap:12px}
+.tuner-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:72px}.tuner-reading{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.tuner-reading strong{font-size:40px;line-height:1.1;font-weight:500;letter-spacing:-1px}.tuner-reading>span{font-size:22px;font-variant-numeric:tabular-nums}.tuner-reading small{font-size:12px;color:var(--workspace-secondary)}.tuner-tools{display:flex;gap:8px}.tuner-tools button{font-size:12px;min-height:40px;background:var(--workspace-control)}
+.tuner-graph{display:flex;flex:1;min-height:220px;background:var(--workspace-panel);border:1px solid var(--workspace-edge);border-radius:14px;padding:8px 8px 0;overflow:hidden}.tuner-graph>canvas{flex:none;width:54px}#pitchScroll{overflow-x:auto;overflow-y:hidden;flex:1;min-width:0;touch-action:pan-x;overscroll-behavior-x:contain}#pitchTrace{display:block}.tuner-caption{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--workspace-secondary)}.tuner-hint{font-size:11px;color:var(--workspace-secondary);margin:0;line-height:1.6}#panel-tuner>.play{flex:none}
+@media(max-height:550px) and (orientation:landscape){.appbar{grid-template-columns:minmax(130px,1fr) minmax(300px,360px) minmax(110px,1fr);gap:8px}#panel-tuner{gap:6px}.tuner-heading{min-height:48px}.tuner-reading strong{font-size:30px}.tuner-reading>span{font-size:20px}.tuner-graph{min-height:130px}.tuner-hint{display:none}#panel-tuner>.play{height:44px;min-height:44px}}
+@media(orientation:portrait) and (max-width:600px){.appbar{grid-template-columns:minmax(0,1fr) auto}.tabs button{font-size:12px}#panel-tuner{flex:none;gap:14px}.tuner-heading{align-items:flex-start;flex-direction:column;gap:14px}.tuner-reading{gap:12px}.tuner-reading strong{font-size:40px}.tuner-tools{align-self:flex-end}.tuner-graph{height:clamp(280px,43svh,420px);flex:none;min-height:280px}.tuner-caption{font-size:11px}.tuner-hint{font-size:11px}}
+@media (orientation:landscape) and (min-height:551px) and (max-width:900px){.appbar{grid-template-columns:minmax(0,1fr) auto;gap:10px}.appbar header{grid-column:1;grid-row:1}.app-actions{grid-column:2;grid-row:1}.appbar .tabs{grid-column:1/-1;grid-row:2}}
+/* Five-second live display: new measurements enter on the left. */
+#pitchScroll{overflow:hidden;touch-action:auto;scrollbar-width:none}
+#pitchScroll::-webkit-scrollbar{display:none}
+#pitchTrace{pointer-events:none}
+
+/* ===== iOS refinement ===== */
+:root{--glass-base:#fff;--ease:cubic-bezier(.2,.8,.2,1)}
+html[data-theme=dark]{--glass-base:#1c1c1e}
+html[data-design]:not([data-design=default]){--glass-base:var(--panel)}
+html:is(:not([data-design]),[data-design=default]){--ios-bg:#f2f2f7;--ios-card:#fff;--ios-fill:#e9e9ee;--ios-sep:#c6c6c8;--workspace-bg:#f2f2f7;--workspace-panel:#fff;--workspace-edge:#d1d1d6;--workspace-control:#e9e9ee;--blue:#007aff}
+html[data-theme=dark]:is(:not([data-design]),[data-design=default]){--ios-bg:#000;--ios-card:#1c1c1e;--ios-fill:#2c2c2e;--ios-sep:#38383a;--workspace-bg:#000;--workspace-panel:#1c1c1e;--workspace-edge:#38383a;--workspace-control:#2c2c2e;--workspace-secondary:#98989f;--muted:#98989f;--blue:#0a84ff}
+html:is(:not([data-design]),[data-design=default]) :is(.controls,.metronome-card,.rhythm-modes){background:var(--ios-card)!important;border:0!important;border-radius:14px;padding:16px!important}
+html:is(:not([data-design]),[data-design=default]) :is(.tabs,.segments,.color-picker){background:var(--ios-fill)}
+html:is(:not([data-design]),[data-design=default]) :is(.voice-grid button,.hold,.tempo-nudge button,.rhythm-mode,.range-nav>button){background:var(--ios-fill)!important;border-color:transparent}
+html:is(:not([data-design]),[data-design=default]) :is(.voice-grid button.active,.hold.active,.rhythm-mode[aria-pressed=true]){background:color-mix(in srgb,var(--blue) 16%,var(--ios-card))!important;color:var(--blue)!important;border-color:var(--blue)}
+html:is(:not([data-design]),[data-design=default]) dialog{background:var(--ios-bg)}
+html:is(:not([data-design]),[data-design=default]) :is(.setting-list,.appearance-settings){background:var(--ios-card)}
+html:is(:not([data-design]),[data-design=default]) .setting-list>label{border-color:var(--ios-sep)}
+html:is(:not([data-design]),[data-design=default]) :is(.tap,.dialog-head button,.text-button,.icon-button,.setting-list select,.setting-list input[type=number]){color:var(--blue)}
+html:is(:not([data-design]),[data-design=default]) .tap{background:color-mix(in srgb,var(--blue) 14%,var(--ios-card));border-color:transparent;box-shadow:none}
+html:is(:not([data-design]),[data-design=default]) .play{background:var(--blue);color:#fff}
+html:is(:not([data-design]),[data-design=default]) .play.playing{background:color-mix(in srgb,var(--blue) 16%,var(--ios-card));color:var(--blue)}
+html:is(:not([data-design]),[data-design=default]) .dot.lit{background:var(--blue)}
+html[data-theme=dark]:is(:not([data-design]),[data-design=default]) :is(.keyboard-card,.range-nav){background:#2c2c2e}
+html[data-theme=dark]:is(:not([data-design]),[data-design=default]) .body-shape{background:var(--ios-fill)}
+html[data-theme=dark]:is(:not([data-design]),[data-design=default]) .switch{background:#39393d}
+html[data-theme=dark]:is(:not([data-design]),[data-design=default]) .switch:checked{background:#30d158}
+/* chrome behaves like an app */
+html,body,button,label,.card,.keyboard-top,.tabs{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,select{-webkit-user-select:auto;user-select:auto}.usage,#appVersion,.offline-status{-webkit-user-select:text;user-select:text}
+html,body{overscroll-behavior:none}
+body:has(dialog[open]){overflow:hidden}
+h1{letter-spacing:0}.tempo-number input{letter-spacing:-3px}
+/* readable sizes and 44pt targets */
+.setting-list input[type=number],.setting-list select{font-size:16px}
+.key-note{font-size:11px;opacity:1;color:#636366}html[data-theme=dark] .key-note{color:#48484a}
+.tuner-hint,.offline-status,.app-update small,.keyboard-top span,.midi-setting small,.balance-hint,.channel label{font-size:12px}
+.icon-button::after,.range-nav>button::after{content:"";position:absolute;inset:-6px}.icon-button,.range-nav>button{position:relative}
+.voice-grid{grid-template-columns:repeat(5,1fr)}
+.hint-small{display:block;margin-top:6px;font-size:12px;color:var(--muted);line-height:1.5}
+#fullscreen[hidden]{display:none!important}#themeToggle{display:none}
+/* motion */
+.tabs,.segments,.color-picker{position:relative}.tabs button,.segments button,.color-picker button{position:relative;z-index:1}
+.thumb{position:absolute;left:0;top:0;z-index:0;border-radius:calc(var(--radius,10px)*.7);background:var(--raised,#fff);box-shadow:0 1px 4px #0003;transition:transform .35s var(--ease),width .35s var(--ease),height .35s var(--ease),opacity .2s;pointer-events:none}
+html[data-theme=dark]:is(:not([data-design]),[data-design=default]) .thumb{background:#636366}
+.tabs button[aria-selected=true],.segments button.active,.color-picker button[aria-pressed=true]{background:transparent!important;box-shadow:none!important}
+button{transition:opacity .15s,background-color .2s,color .2s}
+dialog[open]{animation:sheet-up .42s var(--ease)}dialog[open]::backdrop{animation:fade-in .3s ease}
+dialog.closing{animation:sheet-down .28s cubic-bezier(.4,0,1,1) forwards}dialog.closing::backdrop{animation:fade-out .28s ease forwards}
+@keyframes sheet-up{from{transform:translateY(60px);opacity:0}}
+@keyframes sheet-down{from{transform:translateY(var(--drag,0px))}to{transform:translateY(110%)}}
+@keyframes fade-in{from{opacity:0}}@keyframes fade-out{to{opacity:0}}
+.sheet-handle,#settingsDialog>.dialog-head{touch-action:none}.sheet-handle{padding:0;background-clip:content-box;border:8px solid transparent;border-width:8px 0;width:60px;height:21px;background-color:#c7c7cc}
+/* portrait: floating capsule tab bar */
+@media (orientation:portrait) and (max-width:600px){
+ main{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+ .appbar .tabs{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(calc(100% - 32px),420px);margin:0;z-index:60;padding:4px;border-radius:999px;background:color-mix(in srgb,var(--glass-base) 70%,transparent)!important;-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:0 8px 30px #0003,inset 0 0 0 .5px #ffffff55}
+ .tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px;font-size:11px;border-radius:999px;padding:6px 4px}
+ .tabs .thumb{border-radius:999px}
+ .tab-icon{display:block;width:24px;height:24px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+ .tabs button[aria-selected=true]{color:var(--blue)}.tabs button[data-active=true]::after{display:none}
+ .app-actions .icon-button{min-height:44px;width:44px;height:44px}
+ #toast{bottom:calc(88px + env(safe-area-inset-bottom))}
+}
+.tab-icon{display:none}
+@media (orientation:portrait) and (max-width:600px){.tab-icon{display:block}}
+
+.meter-info{font-size:12px;color:var(--muted);margin:0 0 8px;text-align:center;line-height:1.5;grid-column:1/-1;grid-row:1}
+@media(orientation:portrait) and (max-width:600px){.tempo-control:has(.meter-info) .tempo-number{grid-row:2/5}.tempo-control:has(.meter-info) .tempo-nudge{grid-row:2}.tempo-control:has(.meter-info) .beat-dots{grid-row:3}.tempo-control:has(.meter-info) .tap{grid-row:4}}

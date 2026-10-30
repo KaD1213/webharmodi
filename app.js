@@ -1,6 +1,7 @@
 'use strict';
 import {AdaptiveJustIntonation, applyJustIntonation} from './adaptive-ji.mjs';
 import {TapTempo} from './tap-tempo.mjs';
+import {restoreMeter,chooseMeter,chooseRhythm,meterView} from './meter-state.mjs';
 import {pendulumAngleAtPhase} from './pendulum-motion.mjs';
 const $=id=>document.getElementById(id);
 const designs=[['default','標準'],['studio','Studio'],['modern','Modern'],['paper','Paper']];
@@ -48,10 +49,14 @@ for(const [name,allowed] of Object.entries({transpose:[0,-2,3,5],voice:['Piano',
   if(allowed.includes(saved[name]))state[name]=saved[name];
 }
 for(const name of ['pure','accent'])if(typeof saved[name]==='boolean')state[name]=saved[name];
+restoreMeter(state,saved);
 let contextKey=Number.isInteger(saved.contextKey)&&saved.contextKey>=0&&saved.contextKey<12?saved.contextKey:0;
 let contextMode=saved.contextMode==='minor'?'minor':'major';
 let keepAwake=saved.keepAwake!==false;
+// A loaded preset is already saved; keep the outgoing page from replacing it.
+let presetReloadPending=false;
 function persist(){
+  if(presetReloadPending)return;
   const {hold,oct,...musical}=state;
   try{localStorage.setItem('webharmodi-settings',JSON.stringify({...musical,contextKey,contextMode,keepAwake,viewIndex}));}catch{}
 }
@@ -99,7 +104,7 @@ function retune(){
   renderNotes();
   syncWakeLock();
 }
-function audio(){
+function audio(){try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch{}
   if(!ctx||ctx.state==='closed'){
     const Audio=window.AudioContext||window.webkitAudioContext;
     if(!Audio)throw new Error('このブラウザでは音声を再生できません。');
@@ -151,7 +156,7 @@ function renderNotes(){
   });
 }
 function group(id,items,current,select){const container=$(id),focused=container.contains(document.activeElement)?document.activeElement.textContent:null;container.innerHTML='';items.forEach(([value,label])=>{const b=document.createElement('button');b.textContent=label;b.classList.toggle('active',value===current);b.setAttribute('aria-pressed',String(value===current));if(value==='Custom'){b.setAttribute('aria-disabled','true');b.title='準備中';}b.onclick=()=>select(value);container.append(b);if(label===focused)b.focus({preventScroll:true});});}
-function drawControls(){group('transpose',[[0,'C'],[-2,'B♭'],[3,'E♭'],[5,'F']],state.transpose,v=>{state.transpose=v;tuner.reset();refreshVoices();drawControls();});group('voices',['Piano','Fl','Cl','Brass','Organ','Custom'].map(v=>[v,v]),state.voice,v=>{if(v==='Custom')return;state.voice=v;refreshVoices();drawControls();});group('temperament',[[false,'平均律'],[true,'純正律']],state.pure,v=>{state.pure=v;retune();drawControls();});$('doInfo').textContent='ド = '+noteNames[(state.transpose+12)%12];$('pitchInfo').textContent=`A = ${state.reference} Hz · ${state.pure?'純正律 · '+noteNames[contextKey]+(contextMode==='major'?' 長調':' 短調'):'平均律'}`;renderNotes();setRange(viewIndex);}
+function drawControls(){group('transpose',[[0,'C'],[-2,'B♭'],[3,'E♭'],[5,'F']],state.transpose,v=>{state.transpose=v;tuner.reset();refreshVoices();drawControls();});group('voices',['Piano','Fl','Cl','Brass','Organ'].map(v=>[v,v]),state.voice,v=>{if(v==='Custom')return;state.voice=v;refreshVoices();drawControls();});group('temperament',[[false,'平均律'],[true,'純正律']],state.pure,v=>{state.pure=v;retune();drawControls();});$('doInfo').textContent='ド = '+noteNames[(state.transpose+12)%12];$('pitchInfo').textContent=`A = ${state.reference} Hz · ${state.pure?'純正律 · '+noteNames[contextKey]+(contextMode==='major'?' 長調':' 短調'):'平均律'}`;renderNotes();setRange(viewIndex);}
 const keyMap=['a','w','s','e','d','f','t','g','y','h','u','j','k','o','l','p',';'];
 // A fixed C2–C7 instrument; navigation changes only the visible window.
 const firstKey=-24,lastKey=36,visibleWhites=15;
@@ -238,7 +243,8 @@ function updateContext(){contextKey=+$('contextKey').value;contextMode=$('contex
 $('contextKey').onchange=updateContext;$('contextMode').onchange=updateContext;
 const tempoMarks=[40,42,44,46,48,50,52,54,56,58,60,63,66,69,72,76,80,84,88,92,96,100,104,108,112,116,120,126,132,138,144,152,160,168,176,184,192,200,208];
 const rhythmModes=[[1,'♩','4分モード'],[2,'♪','8分モード'],[4,'♬','16分モード'],[3,'③','3連符モード']];
-function rhythmIcon(value){
+function rhythmIcon(value,compound=false){
+  if(compound&&value===3)return '<svg viewBox="0 0 38 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 27V10h22v17M19 10v17"/>'+[4,15,26].map(x=>'<ellipse cx="'+x+'" cy="28" rx="4.3" ry="3" fill="currentColor"/>').join('')+'</svg>';
   const quarter='<ellipse cx="12" cy="26" rx="5" ry="3.5" transform="rotate(-20 12 26)" fill="currentColor"/><path d="M16 25V5"/>';
   const symbols={
     1:quarter,
@@ -253,10 +259,22 @@ function drawRhythmModes(){
   rhythmModes.forEach(([value,symbol,label])=>{
     const button=document.createElement('button');
     button.className='rhythm-mode';button.setAttribute('aria-pressed',String(value===state.rhythmMode));
-    button.innerHTML='<span aria-hidden="true">'+rhythmIcon(value)+'</span><b>'+label+'</b>';
-    button.onclick=()=>{state.rhythmMode=value;const was=playing;if(was)stopMetro();drawRhythmModes();if(was)startMetro();};
+    button.innerHTML='<span aria-hidden="true">'+rhythmIcon(value,state.meterDenominator===8)+'</span><b>'+(state.meterDenominator===8&&value===3?'8分モード（3分割）':label)+'</b>';
+    button.onclick=()=>{const was=playing;if(was)stopMetro();chooseRhythm(state,value);syncMeterControls();if(was)startMetro();};
     $('mixer').append(button);
   });
+}
+function syncMeterControls(){
+  const view=meterView(state);
+  $('beats').value=view.selection;$('meterPreset').value=view.preset;
+  $('meterInfo').textContent=view.label;
+  $('bpm').setAttribute('aria-label',state.meterDenominator===8?'テンポ（付点4分音符）':'テンポ（4分音符）');
+  drawDots();drawRhythmModes();
+}
+function setMeter(value){
+  const was=playing;if(was)stopMetro();
+  chooseMeter(state,value);syncMeterControls();
+  if(was)startMetro();persist();
 }
 function drawTempoScale(){
   $('tempoScale').innerHTML='';
@@ -301,15 +319,15 @@ function recordTap(){const bpm=tapTempo.tap(performance.now());if(bpm!==null){se
 // Measure the press, not the release; different finger hold times do not affect BPM.
 $('tap').onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();recordTap();};
 $('tap').onclick=e=>{if(e.detail===0)recordTap();};
-$('beats').onchange=e=>{state.beats=+e.target.value;const was=playing;if(was)stopMetro();drawDots();if(was)startMetro();};$('accent').onchange=e=>state.accent=e.target.checked;$('clickVoice').onchange=e=>state.clickVoice=e.target.value;
+$('beats').onchange=e=>setMeter(e.target.value);$('accent').onchange=e=>state.accent=e.target.checked;$('clickVoice').onchange=e=>state.clickVoice=e.target.value;
 
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.target.matches('input,select,textarea')||$('settingsDialog').open||$('fullscreenHelp').open)return;if(e.code==='Space'){if(e.target.closest('button'))return;e.preventDefault();if(!e.repeat)playing?stopMetro():startMetro();return;}const key=keyMap.indexOf(e.key.toLowerCase());if(key>=0){e.preventDefault();if(!e.repeat)press(viewStart+key,'k'+e.code);}});
 document.addEventListener('keyup',e=>unpress('k'+e.code));window.addEventListener('blur',()=>{for(const owner of [...owners.keys()])if(!owner.startsWith('m:'))unpress(owner,true);});document.addEventListener('visibilitychange',()=>{if(document.hidden){stopNotes();stopMetro();}else syncWakeLock();});
 document.addEventListener('keydown',e=>{if(e.code==='Escape'){stopNotes();stopMetro();}});
 // Native range keeps dragging, touch and keyboard access in sync with BPM.
 $('tempoWeight').oninput=e=>setBpm(tempoMarks[+e.target.value]);
-for(const view of ['harmony','metronome'])$('tab-'+view).onclick=()=>{
-  for(const name of ['harmony','metronome']){
+for(const view of ['harmony','metronome','tuner'])$('tab-'+view).onclick=()=>{
+  for(const name of ['harmony','metronome','tuner']){
     const selected=name===view;
     $('tab-'+name).setAttribute('aria-selected',String(selected));
     $('panel-'+name).hidden=!selected;
@@ -434,14 +452,10 @@ let saveTimer;
 document.addEventListener('input',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(persist,150);});
 window.addEventListener('pagehide',()=>{persist();stopNotes();stopMetro();});
 rangeSlider.addEventListener('change',persist);
-for(const tab of ['harmony','metronome'])$('tab-'+tab).addEventListener('keydown',e=>{
+for(const tab of ['harmony','metronome','tuner'])$('tab-'+tab).addEventListener('keydown',e=>{
   if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-  e.preventDefault();const target=e.key==='Home'?'harmony':e.key==='End'?'metronome':tab==='harmony'?'metronome':'harmony';
+  e.preventDefault();const views=['harmony','metronome','tuner'];const target=e.key==='Home'?views[0]:e.key==='End'?views.at(-1):views[(views.indexOf(tab)+(e.key==='ArrowRight'?1:2))%views.length];
   $('tab-'+target).click();$('tab-'+target).focus();
-});
-for(const dialog of document.querySelectorAll('dialog'))dialog.addEventListener('click',e=>{
-  const r=dialog.getBoundingClientRect();
-  if(e.target===dialog&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))dialog.close();
 });
 
 let toastTimer;
@@ -602,3 +616,97 @@ for(const dialog of [$('settingsDialog')]){
   dialog.querySelector('.settings-grid').after(appearance);
 }
 syncAppearanceUI();
+
+/* ===== iOS refinement & band features ===== */
+{
+  // Sliding selection thumb for segmented controls and tabs.
+  const thumbs=new WeakMap();
+  const place=c=>{let t=thumbs.get(c);if(!t){t=document.createElement('i');t.className='thumb';t.style.transition='none';thumbs.set(c,t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.style.transition=''));}
+    if(t.parentNode!==c)c.prepend(t);
+    const a=c.querySelector(':scope>[aria-selected=true],:scope>.active,:scope>[aria-pressed=true]');
+    if(!a||!a.offsetWidth){t.style.opacity=0;return;}
+    t.style.opacity=1;t.style.width=a.offsetWidth+'px';t.style.height=a.offsetHeight+'px';t.style.transform=`translate(${a.offsetLeft}px,${a.offsetTop}px)`;};
+  const watched=new Set();
+  const selectionResize=new ResizeObserver(entries=>entries.forEach(({target})=>place(target)));
+  const watch=c=>{if(watched.has(c))return;watched.add(c);new MutationObserver(()=>place(c)).observe(c,{childList:true,subtree:true,attributes:true,attributeFilter:['class','aria-selected','aria-pressed']});selectionResize.observe(c);place(c);};
+  const watchAll=()=>document.querySelectorAll('.tabs,.segments,.color-picker').forEach(watch);
+  watchAll();addEventListener('resize',()=>watched.forEach(place));addEventListener('orientationchange',()=>setTimeout(()=>watched.forEach(place),150));
+  document.fonts?.ready.then(()=>watched.forEach(place));
+  $('settingsDialog').addEventListener('toggle',()=>watched.forEach(place));$('settingsOpen').addEventListener('click',()=>setTimeout(()=>{watchAll();watched.forEach(place)},0));
+  // Details toggle does not bubble; capture it and measure after layout is updated.
+  $('settingsDialog').addEventListener('toggle',e=>{
+    if(e.target.matches('.appearance-settings')&&e.target.open)requestAnimationFrame(()=>{watchAll();watched.forEach(place);});
+  },true);
+
+  // Appearance picker (design + light/dark) lives in settings; the header toggle is hidden.
+  if(!document.querySelector('.appearance-settings')){
+    const choices=designs.filter(([id])=>id!=='default').concat([['default','標準']]).sort((a,b)=>designs.findIndex(d=>d[0]===a[0])-designs.findIndex(d=>d[0]===b[0]));
+    const box=document.createElement('details');box.className='appearance-settings';
+    box.innerHTML='<summary>外観<span class="design-current"></span></summary><div class="appearance-label">デザイン</div><div class="design-picker">'+choices.map(([id,name])=>`<button class="design-choice" data-design-choice="${id}"><span class="design-name">${name}</span><span class="design-swatch swatch-${id}"><i></i><i></i><i></i></span></button>`).join('')+'</div><div class="appearance-label">配色</div><div class="color-picker">'+[['system','端末に合わせる'],['light','ライト'],['dark','ダーク']].map(([id,name])=>`<button data-color-choice="${id}">${name}</button>`).join('')+'</div>';
+    document.querySelector('#settingsDialog .secondary-settings').after(box);
+    box.querySelectorAll('[data-design-choice]').forEach(b=>b.onclick=()=>{designPreference=b.dataset.designChoice;try{localStorage.setItem('webharmodi-design',designPreference);}catch{}syncTheme();});
+    box.querySelectorAll('[data-color-choice]').forEach(b=>b.onclick=()=>{themePreference=b.dataset.colorChoice;try{localStorage.setItem('webharmodi-theme',themePreference);}catch{}syncTheme();});
+    syncAppearanceUI();watchAll();
+  }
+
+  // Bottom-sheet behaviour: animated close, drag or swipe down to dismiss.
+  const closeSheet=d=>{if(!d.open||d.classList.contains('closing'))return;d.classList.add('closing');
+    let timeout;
+    const cleanup=()=>{clearTimeout(timeout);d.removeEventListener('animationend',onAnimationEnd);d.removeEventListener('close',done);};
+    const done=()=>{cleanup();d.classList.remove('closing');d.style.removeProperty('--drag');d.style.transform='';d.style.transition='';if(d.open)d.close();};
+    const onAnimationEnd=e=>{if(e.target===d&&e.animationName==='sheet-down')done();};
+    d.addEventListener('animationend',onAnimationEnd);d.addEventListener('close',done);
+    timeout=setTimeout(done,420);
+  };
+  for(const [dialog,close] of [['settingsDialog','settingsClose'],['fullscreenHelp','fullscreenHelpClose']]){
+    const d=$(dialog);if(!d)continue;
+    $(close).onclick=()=>closeSheet(d);
+    d.addEventListener('cancel',e=>{e.preventDefault();closeSheet(d);});
+    d.addEventListener('click',e=>{
+      if(e.target!==d)return;
+      const r=d.getBoundingClientRect();
+      if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeSheet(d);
+    });
+    let drag=null;
+    d.addEventListener('pointerdown',e=>{if(!e.target.closest('.sheet-handle,.dialog-head')||e.target.closest('button'))return;drag={id:e.pointerId,y:e.clientY,t:e.timeStamp,dy:0};d.setPointerCapture(e.pointerId);d.style.transition='none';});
+    d.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;drag.dy=Math.max(0,e.clientY-drag.y);d.style.transform=`translateY(${drag.dy}px)`;});
+    const end=e=>{if(!drag||e.pointerId!==drag.id)return;const {dy,t}=drag,speed=dy/Math.max(1,e.timeStamp-t);drag=null;
+      if(dy>110||speed>.6){d.style.setProperty('--drag',dy+'px');closeSheet(d);}else{d.style.transition='transform .35s '+getComputedStyle(document.documentElement).getPropertyValue('--ease');d.style.transform='';}};
+    d.addEventListener('pointerup',end);
+    d.addEventListener('pointercancel',e=>{if(drag?.id!==e.pointerId)return;drag=null;d.style.transition='';d.style.transform='';});
+  }
+
+  // Fullscreen is pointless in the installed app and unsupported on iPhone Safari.
+  const root=document.documentElement,installed=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
+  if(installed||!(root.requestFullscreen||root.webkitRequestFullscreen))$('fullscreen').hidden=true;
+
+  // Instrument names under the transposition control.
+  const names={0:'フルート・オーボエ・ファゴット・トロンボーン・ユーフォ・チューバ・ピアノ',[-2]:'トランペット・クラリネット・テナーサックス・ソプラノサックス',3:'アルトサックス・バリトンサックス',5:'ホルン'};
+  const showNames=()=>{$('transposeNames').textContent='選択中：'+(names[state.transpose]||'');};
+  const baseDraw=drawControls;drawControls=function(){baseDraw();showNames();};showNames();
+
+  // Both selectors reflect the same explicit, persisted meter state.
+  $('meterPreset').onchange=e=>setMeter(e.target.value?Number(e.target.value)*3+'/8':'4');
+  syncMeterControls();
+
+  // Named presets. Loading rewrites the saved settings and reloads, so sound stops cleanly.
+  const store=()=>{try{return JSON.parse(localStorage.getItem('webharmodi-presets')||'{}')||{};}catch{return {};}};
+  const draw=sel=>{const all=store(),select=$('presetSelect');select.innerHTML='';
+    const names=Object.keys(all);if(!names.length)select.append(new Option('保存したものはありません',''));
+    names.forEach(n=>select.append(new Option(n,n)));if(sel&&all[sel])select.value=sel;};
+  draw();
+  $('presetSave').onclick=()=>{const name=(prompt('プリセット名（例：行進曲 6/8 ♩.=100）')||'').trim().slice(0,30);if(!name)return;
+    persist();const all=store();try{all[name]=JSON.parse(localStorage.getItem('webharmodi-settings'));localStorage.setItem('webharmodi-presets',JSON.stringify(all));}catch{toast('保存できませんでした。');return;}
+    draw(name);toast('「'+name+'」を保存しました。');};
+  $('presetLoad').onclick=()=>{
+    if(presetReloadPending)return;
+    const all=store(),name=$('presetSelect').value;if(!all[name])return;
+    try{localStorage.setItem('webharmodi-settings',JSON.stringify(all[name]));}
+    catch{toast('読み込めませんでした。');return;}
+    // Covers bubbling click/change events, queued saves and pagehide persistence.
+    presetReloadPending=true;
+    clearTimeout(saveTimer);
+    location.reload();
+  };
+  $('presetDelete').onclick=()=>{const all=store(),name=$('presetSelect').value;if(!all[name]||!confirm('「'+name+'」を削除しますか？'))return;delete all[name];try{localStorage.setItem('webharmodi-presets',JSON.stringify(all));}catch{}draw();};
+}

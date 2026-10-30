@@ -1,8 +1,8 @@
 'use strict';
-const release='a595dbbbaceeb2ca';
+const release='bb539040692c61d9';
 const prefix='webharmodi:'+new URL(self.registration.scope).pathname+':';
 const cacheName=prefix+release;
-const files=['./','./index.html','./style.css?v='+release,'./themes.css?v='+release,'./app.js?v='+release,'./adaptive-ji.mjs','./tap-tempo.mjs','./pendulum-motion.mjs','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
+const files=['./','./index.html','./style.css?v='+release,'./themes.css?v='+release,'./app.js?v='+release,'./adaptive-ji.mjs','./tap-tempo.mjs','./pendulum-motion.mjs','./meter-state.mjs','./pitch-detector.mjs','./pitch-tuner.mjs','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 // Fetch a complete release without reusing Safari's HTTP cache. Unversioned HTML
 // or modules from that cache must never be installed under a new release name.
 self.addEventListener('install',event=>event.waitUntil((async()=>{
