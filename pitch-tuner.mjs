@@ -37,7 +37,8 @@ function draw(){
  const dark=document.documentElement.dataset.theme==='dark';
  const fg=dark?'#afb6c2':'#646b77',line=dark?'#343b46':'#e1e4e9',accent=dark?'#8ab4f8':'#007aff';
  const g=setup(canvas,w,h),a=setup(axis,54,h);
- const y=cents=>22+(50-cents)/100*(h-44),x=t=>w/2-(newest-t)/5*Math.max(1,w/2-12);
+ const headX=connected?w/2:w-16;
+ const y=cents=>22+(50-cents)/100*(h-44),x=t=>headX-(newest-t)/5*Math.max(1,headX-12);
  g.font='10px -apple-system,sans-serif';a.font='11px -apple-system,sans-serif';
  for(const cents of [-50,-25,0,25,50]){
   g.strokeStyle=cents===0?(dark?'#5caf9a':'#469d81'):line;
@@ -60,13 +61,18 @@ function draw(){
  }
  g.restore();
  if(points.length){
-  const p=points.at(-1),cx=w/2,cy=y(p.cents);
+  const p=points.at(-1),cx=headX,cy=y(p.cents);
   // The live marker stays horizontally fixed, moving only with pitch (vertical).
-  g.strokeStyle=accent;g.lineWidth=3;g.lineCap='round';
-  g.beginPath();g.moveTo(cx-14,cy);g.lineTo(cx+14,cy);g.stroke();
-  g.fillStyle=accent;g.beginPath();g.arc(cx,cy,4,0,Math.PI*2);g.fill();
-  g.font='bold 15px -apple-system,sans-serif';g.textAlign='center';
-  g.fillText(noteName(p.nearest),cx,16);
+  g.strokeStyle=accent;g.lineWidth=connected?6:3;g.lineCap='round';
+  const markerHalf=connected?Math.min(46,w*.16):10;
+  g.beginPath();g.moveTo(cx-markerHalf,cy);g.lineTo(cx+markerHalf,cy);g.stroke();
+  g.fillStyle=accent;g.beginPath();g.arc(cx,cy,connected?9:4,0,Math.PI*2);g.fill();
+  g.font=(connected?'bold 32px':'bold 15px')+' -apple-system,sans-serif';g.textAlign=connected?'center':'right';
+  g.fillText(noteName(p.nearest),cx,connected?38:16);
+  if(connected){
+   g.font='600 22px -apple-system,sans-serif';
+   g.fillText((p.cents>=0?'+':'−')+Math.abs(p.cents).toFixed(1)+' ct',cx,66);
+  }
  }
 }
 function stop(){
