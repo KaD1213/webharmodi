@@ -380,3 +380,61 @@ dialog.closing{animation:sheet-down .28s cubic-bezier(.4,0,1,1) forwards}dialog.
 
 /* Beta-only tabs must stay hidden in every responsive layout. */
 .tabs button[hidden]{display:none!important}
+#panel-record[hidden]{display:none!important}
+.record-card{padding:20px;border-radius:16px;background:var(--workspace-panel);max-height:65dvh;overflow:auto}
+.record-card h2{font-size:20px;margin:0 0 16px}
+#recordToggle{background:#bb2037;color:white;padding-inline:22px}
+#recordClips article{display:grid;gap:8px;margin-top:16px}
+#recordClips audio{width:100%;max-width:460px}
+#recordClips a{color:var(--blue)}
+.take-head{display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--workspace-edge);padding-bottom:14px}.take-head h2{margin:0 auto 0 0}.take-head #takeClock{font-size:clamp(28px,6vw,50px);font-variant-numeric:tabular-nums;font-weight:300}.take-head #recordToggle{background:transparent;padding:5px;border:2px solid #e04d56;border-radius:50%;width:56px;height:56px;display:grid;place-items:center}.take-head #recordToggle:before{content:'';width:36px;height:36px;background:#ed4452;border-radius:50%}.take-head #recordToggle[data-recording=true]:before{width:23px;height:23px;border-radius:5px}#recordClips article{display:block;position:relative;overflow:hidden;border-radius:12px;background:#bc2337}.take-delete{position:absolute;right:0;top:0;bottom:0;width:76px;background:transparent;color:white}.take-face{position:relative;display:flex;align-items:center;gap:9px;padding:10px;background:var(--workspace-panel,#fff);border:1px solid var(--workspace-edge);border-radius:12px;touch-action:pan-y;transition:transform .18s ease-out}.take-info{flex:1;min-width:0}.take-info small{display:block;font-size:11px;margin-top:4px;opacity:.7}.take-play,.take-more{min-width:40px;padding:4px}.take-play{border-radius:50%;color:var(--blue)}#recordClips audio{display:none}
+.take-head #recordToggle:not(:empty){width:auto;min-width:64px;border-radius:20px;color:var(--blue);border-color:currentColor}.take-head #recordToggle:not(:empty)::before{display:none}#finishRecording:not([hidden]){margin-top:10px}
+#recordClips a{display:grid;place-items:center;min-width:44px;min-height:44px;font-size:23px;text-decoration:none}#recordStatus:empty{display:none}
+#recordClips article{background:transparent;isolation:isolate}.take-delete{inset:50% 4px auto auto;margin-top:-22px;width:64px;height:44px;padding:0;border-radius:999px;background:rgba(255,70,84,.13);color:#a61b32;border:1px solid rgba(204,39,65,.22);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35);transition:transform .32s cubic-bezier(.2,.85,.22,1)}.take-face{transition:transform .32s cubic-bezier(.2,.85,.22,1);user-select:none}.dragging .take-face,.dragging .take-delete{transition:none}@media(prefers-reduced-motion:reduce){.take-face,.take-delete{transition:none}}
+
+html[data-theme="dark"] .take-delete{background:rgba(255,84,102,.20);color:#ffacb8;border-color:rgba(255,150,162,.32)}
+.take-info strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:pan-y;-webkit-touch-callout:none}.record-name-input{width:100%;min-width:0;background:transparent;color:inherit;border:0;border-bottom:1px solid var(--blue);border-radius:0;font-size:16px;padding:4px 0;user-select:text;-webkit-user-select:text}
+.metro-focus-toolbar{grid-column:1/-1;display:flex;justify-content:flex-end}
+#metroFocus{display:flex;align-items:center;gap:6px;color:var(--blue);min-height:44px}
+#metroFocus svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7}
+body.metro-focus-open{overflow:hidden}
+#panel-metronome.metro-expanded{position:fixed;inset:0;z-index:200;width:100%;height:100dvh;max-height:none;overflow:auto;box-sizing:border-box;background:var(--workspace-panel,#fff);padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:44px minmax(0,1fr);gap:12px}
+#panel-metronome.metro-expanded .metronome-card{min-height:0;height:100%;grid-template-rows:minmax(0,1fr) 48px}
+#panel-metronome.metro-expanded .metronome-main{height:100%;min-height:0}
+#panel-metronome.metro-expanded .mechanism{height:100%;max-width:none}
+@media(orientation:portrait){
+ #panel-metronome.metro-expanded{grid-template-columns:1fr;grid-template-rows:44px minmax(380px,1fr) auto}
+ #panel-metronome.metro-expanded .metronome-main{grid-template-columns:1fr;grid-template-rows:minmax(200px,1fr) auto}
+ #panel-metronome.metro-expanded .rhythm-modes{padding:8px!important}
+}
+/* A dedicated portrait instrument face, sized to the phone viewport. */
+#panel-metronome.metro-expanded{grid-template-columns:minmax(0,480px);grid-template-rows:40px minmax(0,1fr);justify-content:center;gap:6px;overflow:hidden}
+#panel-metronome.metro-expanded .mixer-title,#panel-metronome.metro-expanded .rhythm-modes{display:none}
+#panel-metronome.metro-expanded .metronome-card{width:100%;padding:8px!important;grid-template-rows:minmax(0,1fr) 48px;gap:8px}
+#panel-metronome.metro-expanded .metronome-main{display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 138px;gap:6px}
+#panel-metronome.metro-expanded .mechanism{width:100%;height:100%;min-height:0;max-width:none}
+#panel-metronome.metro-expanded .tempo-control{width:100%;display:grid;grid-template-columns:1fr 1.2fr 1fr;grid-template-rows:24px 64px 40px;gap:3px;align-items:center}
+#panel-metronome.metro-expanded .meter-info{grid-column:1/-1;grid-row:1;margin:0;text-align:center}
+#panel-metronome.metro-expanded .tempo-number{grid-column:2;grid-row:2;display:flex;flex-direction:column;align-items:center}
+#panel-metronome.metro-expanded .tempo-number input{width:100%;font-size:56px;line-height:1}
+#panel-metronome.metro-expanded .tempo-number span{font-size:10px}
+#panel-metronome.metro-expanded .tempo-nudge{display:contents}
+#panel-metronome.metro-expanded #slower{grid-column:1;grid-row:2;justify-self:center}
+#panel-metronome.metro-expanded #faster{grid-column:3;grid-row:2;justify-self:center}
+#panel-metronome.metro-expanded .beat-dots{grid-column:1/3;grid-row:3;justify-self:center;margin:0}
+#panel-metronome.metro-expanded .tap{grid-column:3;grid-row:3;width:100%;min-height:36px}
+@media(orientation:landscape) and (max-height:550px){
+ #panel-metronome.metro-expanded .metronome-main{grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:1fr}
+ #panel-metronome.metro-expanded{grid-template-columns:minmax(0,700px)}
+}
+#panel-metronome.metro-expanded .tempo-control,#panel-metronome.metro-expanded #play{display:none}
+#panel-metronome.metro-expanded .metronome-card,#panel-metronome.metro-expanded .metronome-main{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr)}
+#panel-metronome.metro-expanded .rail{touch-action:none}
+/* Keep the instrument-view action within its own card. */
+.metronome-card{position:relative}
+.metro-focus-toolbar{position:absolute;top:8px;right:8px;z-index:4}
+#metroFocus{padding:6px 9px;font-size:12px;background:transparent;gap:5px}
+#metroFocus svg{width:16px;height:16px}
+#panel-metronome.metro-expanded{grid-template-rows:minmax(0,1fr)}
+#panel-metronome.metro-expanded .metronome-card{padding-top:48px!important}
+#panel-metronome.metro-expanded .metro-focus-toolbar{top:0;right:0}

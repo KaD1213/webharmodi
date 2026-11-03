@@ -1,8 +1,9 @@
+import {initMetronomeFocus} from './metronome-focus.mjs';
 'use strict';
 import {AdaptiveJustIntonation, applyJustIntonation} from './adaptive-ji.mjs';
 import {TapTempo} from './tap-tempo.mjs';
 import {restoreMeter,chooseMeter,chooseRhythm,meterView} from './meter-state.mjs';
-import {pendulumAngleAtPhase} from './pendulum-motion.mjs';
+import {pendulumAngleAtPhase, pendulumClickPhase} from './pendulum-motion.mjs';
 const $=id=>document.getElementById(id);
 const designs=[['default','標準'],['studio','Studio'],['modern','Modern'],['paper','Paper']];
 let designPreference='default';
@@ -62,6 +63,7 @@ function persist(){
 }
 let ctx,master,metroMaster,playing=false,timer,nextTime=0,tick=0,generation=0;
 let pendulumFrames=[],pendulumRAF=0,pendulumAngle=0;
+let pendulumDirection = 1;
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 function balanceGains(){
   const position=(state.balance+100)/200;
@@ -300,7 +302,7 @@ function scheduler(){
     if(pendulumFrames.length>256)pendulumFrames.splice(0,pendulumFrames.length-256);
     if(sub%(12/state.rhythmMode)===0)clickAt(nextTime,.8,state.accent&&beat===0&&sub===0);if(sub===0){const gen=generation;const id=setTimeout(()=>{visualTimers.delete(id);if(gen!==generation)return;document.querySelectorAll('.dot').forEach((el,i)=>el.classList.toggle('lit',i===beat));},Math.max(0,(nextTime-ctx.currentTime)*1000));visualTimers.add(id);}tick++;nextTime+=60/state.bpm/12;}
 }
-function startMetro(){if(playing)return;try{audio();}catch(error){toast(error.message);return;}playing=true;generation++;tick=0;pendulumFrames=[];nextTime=ctx.currentTime+.05;timer=setInterval(scheduler,25);scheduler();startPendulum();$('play').textContent='停止';$('play').classList.add('playing');$('play').setAttribute('aria-pressed','true');$('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム（再生中）');syncWakeLock();}
+function startMetro(direction = -1){if(playing)return;pendulumDirection = direction === 1 ? -1 : 1;try{audio();}catch(error){toast(error.message);return;}playing=true;generation++;tick=0;pendulumFrames=[];nextTime=ctx.currentTime+.05;timer=setInterval(scheduler,25);scheduler();startPendulum();$('play').textContent='停止';$('play').classList.add('playing');$('play').setAttribute('aria-pressed','true');$('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム（再生中）');syncWakeLock();}
 function stopMetro(){playing=false;stopPendulum();generation++;clearInterval(timer);visualTimers.forEach(clearTimeout);visualTimers.clear();scheduled.forEach(o=>{try{o.stop();}catch{}});scheduled.clear();$('play').textContent='開始';$('play').classList.remove('playing');$('play').setAttribute('aria-pressed','false');$('tab-metronome').dataset.active='false';$('tab-metronome').setAttribute('aria-label','メトロノーム');document.querySelectorAll('.dot').forEach(el=>el.classList.remove('lit'));syncWakeLock();}
 function drawDots(){$('beatDots').innerHTML='<span class="dot"></span>'.repeat(state.beats);}
 function setBpm(n,{fromTap=false}={}){
@@ -338,9 +340,9 @@ $('betaFeatures').onchange=e=>{
   try{localStorage.setItem('webharmodi-beta-features',String(betaEnabled));}catch{}
   syncBetaFeatures();
 };
-for(const view of ['harmony','metronome','tuner'])$('tab-'+view).onclick=()=>{
+for(const view of ['harmony','metronome','record','tuner'])$('tab-'+view).onclick=()=>{
   if(view==='tuner'&&!betaEnabled)return;
-  for(const name of ['harmony','metronome','tuner']){
+  for(const name of ['harmony','metronome','record','tuner']){
     const selected=name===view;
     $('tab-'+name).setAttribute('aria-selected',String(selected));
     $('panel-'+name).hidden=!selected;
@@ -410,7 +412,9 @@ function paintPendulum(){
     const phase=now<from.time?from.phase:to?from.phase+(to.phase-from.phase)*(now-from.time)/(to.time-from.time):from.phase+(now-from.time)*state.bpm/60;
     // Finite-amplitude pendulum: slow reversal, fast central crossing.
     // The central beat reference alternates direction; subdivisions do not speed up the arm.
-    setPendulumAngle(pendulumAngleAtPhase(phase,reducedMotion.matches?6:38));
+    const amplitude = reducedMotion.matches ? 6 : 38;
+    // Keep the audio beat clock exact; align each click just beyond centre.
+    setPendulumAngle(pendulumDirection * pendulumAngleAtPhase(phase + pendulumClickPhase(amplitude), amplitude));
   }
   pendulumRAF=requestAnimationFrame(paintPendulum);
 }
@@ -466,9 +470,9 @@ let saveTimer;
 document.addEventListener('input',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(persist,150);});
 window.addEventListener('pagehide',()=>{persist();stopNotes();stopMetro();});
 rangeSlider.addEventListener('change',persist);
-for(const tab of ['harmony','metronome','tuner'])$('tab-'+tab).addEventListener('keydown',e=>{
+for(const tab of ['harmony','metronome','record','tuner'])$('tab-'+tab).addEventListener('keydown',e=>{
   if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-  e.preventDefault();const views=['harmony','metronome','tuner'].filter(name=>!$('tab-'+name).hidden);const target=e.key==='Home'?views[0]:e.key==='End'?views.at(-1):views[(views.indexOf(tab)+(e.key==='ArrowRight'?1:views.length-1))%views.length];
+  e.preventDefault();const views=['harmony','metronome','record','tuner'].filter(name=>!$('tab-'+name).hidden);const target=e.key==='Home'?views[0]:e.key==='End'?views.at(-1):views[(views.indexOf(tab)+(e.key==='ArrowRight'?1:views.length-1))%views.length];
   $('tab-'+target).click();$('tab-'+target).focus();
 });
 
@@ -719,3 +723,151 @@ syncAppearanceUI();
   };
   $('presetDelete').onclick=()=>{const all=store(),name=$('presetSelect').value;if(!all[name]||!confirm('「'+name+'」を削除しますか？'))return;delete all[name];try{localStorage.setItem('webharmodi-presets',JSON.stringify(all));}catch{}draw();};
 }
+
+/* Microphone recording is available independently of experimental features. */
+{
+ const panel=$('panel-record'),button=$('recordToggle'),status=$('recordStatus');
+ let recorder=null,requestId=0,count=0,clockTimer;
+ const time=ms=>{const sec=Math.floor(ms/1000);return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');};
+ function recordingUI(active){
+   button.dataset.recording=String(active);
+   button.title=active?'録音を終了':'新規録音';
+   button.setAttribute('aria-label',button.title);
+ }
+ let closeOpenRow=null;
+ function mountTake(row,player,save,label,detail){
+   const face=document.createElement('div'),info=document.createElement('div');
+   const play=document.createElement('button'),del=document.createElement('button');
+   face.className='take-face';info.className='take-info';play.className='take-play';del.className='take-delete';
+   const meta=document.createElement('small');meta.textContent=detail;info.append(label,meta);
+   del.textContent='削除';
+   const actionWidth=76;
+   function position(offset){
+     face.style.transform='translate3d('+offset+'px,0,0)';
+     del.style.transform='translate3d('+(offset+actionWidth)+'px,0,0)';
+   }
+   function close(){position(0);del.inert=true;if(closeOpenRow===close)closeOpenRow=null;}
+   function reveal(open){
+     if(!open){close();return;}
+     if(closeOpenRow!==close)closeOpenRow?.();
+     closeOpenRow=close;position(-actionWidth);del.inert=false;
+   }
+   close();
+   const sync=()=>{play.textContent=player.paused?'▶':'Ⅱ';play.setAttribute('aria-label',label.textContent+(player.paused?'を再生':'を一時停止'));};sync();
+   player.onplay=player.onpause=player.onended=sync;
+   play.onclick=async()=>{if(!player.paused){player.pause();return;}for(const other of panel.querySelectorAll('audio'))if(other!==player)other.pause();try{await player.play();}catch{status.textContent='再生できませんでした。';}};
+   del.onclick=()=>{close();player.pause();const url=save.href;player.removeAttribute('src');player.load();row.remove();URL.revokeObjectURL(url);};
+   let drag=null,swiped=false,renameTimer=null,editing=false;
+   const originalDownload=save.download;
+   const extension=originalDownload.slice(originalDownload.lastIndexOf('.'));
+   function cancelRenameHold(){clearTimeout(renameTimer);renameTimer=null;}
+   function editName(){
+     if(editing)return;
+     cancelRenameHold();drag=null;row.classList.remove('dragging');close();
+     editing=true;
+     const previous=label.textContent,input=document.createElement('input');
+     input.className='record-name-input';input.type='text';input.maxLength=120;
+     input.value=previous;input.setAttribute('aria-label','録音の名前');
+     label.replaceWith(input);input.focus();input.select();
+     let finished=false;
+     function finishName(cancel=false){
+       if(finished)return;finished=true;
+       const name=cancel?previous:input.value.trim()||previous;
+       label.textContent=name;
+       if(name!==previous){
+         const safe=name.replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/,'')||'録音';
+         save.download=safe+extension;
+       }
+       save.setAttribute('aria-label',name+'をダウンロード');sync();
+       input.replaceWith(label);editing=false;
+     }
+     input.onblur=()=>finishName();
+     input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();if(!e.isComposing)finishName();}else if(e.key==='Escape'){e.preventDefault();finishName(true);}};
+     input.onpointerdown=e=>e.stopPropagation();
+   }
+   label.tabIndex=0;label.setAttribute('aria-label','録音名を変更');
+   label.ondblclick=e=>{e.preventDefault();editName();};
+   label.onkeydown=e=>{if(e.key==='Enter'||e.key==='F2'){e.preventDefault();e.stopPropagation();editName();}};
+   label.oncontextmenu=e=>{e.preventDefault();editName();};
+   label.onpointerdown=e=>{if(e.isPrimary&&e.button===0){cancelRenameHold();renameTimer=setTimeout(editName,500);}};
+
+   face.onpointerdown=e=>{
+     if(editing||!e.isPrimary||e.button!==0)return;
+     if(closeOpenRow!==close)closeOpenRow?.();
+     swiped=false;
+     const transform=getComputedStyle(face).transform;
+     const start=transform==='none'?0:new DOMMatrixReadOnly(transform).m41;
+     drag={id:e.pointerId,x:e.clientX,y:e.clientY,start,wasOpen:!del.inert,lastX:e.clientX,lastTime:e.timeStamp,velocity:0};
+   };
+   face.onpointermove=e=>{
+     if(drag?.id!==e.pointerId)return;
+     const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+     if(Math.max(Math.abs(dx),Math.abs(dy))>5)cancelRenameHold();
+     if(!swiped){
+       if(Math.max(Math.abs(dx),Math.abs(dy))<5)return;
+       if(Math.abs(dy)>Math.abs(dx)){drag=null;return;}
+       swiped=true;face.setPointerCapture(e.pointerId);row.classList.add('dragging');
+     }
+     const dt=e.timeStamp-drag.lastTime;
+     if(dt>0)drag.velocity=(e.clientX-drag.lastX)/dt;
+     drag.lastX=e.clientX;drag.lastTime=e.timeStamp;
+     let offset=Math.min(0,drag.start+dx);
+     if(offset < -actionWidth)offset=-actionWidth-14*(1-Math.exp((offset+actionWidth)/60));
+     position(offset);
+   };
+   function finish(e){
+     cancelRenameHold();
+     if(drag?.id!==e.pointerId)return;
+     row.classList.remove('dragging');
+     if(swiped){
+       const v=e.timeStamp-drag.lastTime<90?drag.velocity:0;
+       const projected=drag.start+e.clientX-drag.x+v*120;
+       reveal(e.type==='pointercancel'?drag.wasOpen:projected < -actionWidth/2);
+     }
+     drag=null;
+   }
+   row.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();reveal(true);del.focus();}else if(e.key==='Escape'){close();play.focus();}});
+   face.onpointerup=face.onpointercancel=finish;
+   face.addEventListener('click',e=>{if(swiped&&e.detail){e.preventDefault();e.stopImmediatePropagation();swiped=false;}},true);
+   face.append(play,info,save);row.append(del,face,player);$('recordClips').prepend(row);
+ }
+ function stopRecording(){
+   requestId++;
+   if(recorder&&recorder.state!=='inactive'){button.disabled=true;recorder.stop();}
+   else if(!recorder){button.disabled=false;recordingUI(false);status.textContent='';}
+ }
+ button.onclick=async()=>{
+   if(recorder){stopRecording();return;}
+   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){status.textContent='このブラウザでは録音できません。';return;}
+   const id=++requestId;
+   button.disabled=true;status.textContent='マイクの使用を許可してください';
+   let stream;
+   try{
+     stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+     if(id!==requestId||panel.hidden){stream.getTracks().forEach(t=>t.stop());return;}
+     const take=new MediaRecorder(stream),chunks=[],started=new Date();
+     const session=state.bpm+' BPM · A = '+state.reference+' Hz';
+     take.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+     take.onstop=()=>{
+       clearInterval(clockTimer);const length=time(Date.now()-started);$('takeClock').textContent='00:00';button.textContent='';stream.getTracks().forEach(t=>t.stop());recorder=null;
+       button.disabled=false;recordingUI(false);
+       if(!chunks.length){status.textContent='録音データがありません。';return;}
+       const type=take.mimeType||chunks[0].type,url=URL.createObjectURL(new Blob(chunks,{type}));
+       const row=document.createElement('article'),player=document.createElement('audio'),save=document.createElement('a'),label=document.createElement('strong');
+       label.textContent='録音'+String(++count).padStart(2,'0');
+       player.controls=true;player.src=url;save.href=url;
+       save.download='WebHarmoDi-'+started.toISOString().replace(/:/g,'-')+(/mp4/i.test(type)?'.m4a':/ogg/i.test(type)?'.ogg':'.webm');
+       save.textContent='↓';save.title='ダウンロード';save.setAttribute('aria-label',label.textContent+'をダウンロード');mountTake(row,player,save,label,length+' · '+session);
+       status.textContent='';
+     };
+     take.start();$('takeClock').textContent='00:00';clockTimer=setInterval(()=>{$('takeClock').textContent=time(Date.now()-started);},250);recorder=take;button.disabled=false;recordingUI(true);status.textContent='';
+   }catch(error){
+     stream?.getTracks().forEach(t=>t.stop());
+     if(id===requestId){button.disabled=false;status.textContent=error.name==='NotAllowedError'?'録音するにはマイクの使用を許可してください。':'マイクから録音を開始できませんでした。';}
+   }
+ };
+ new MutationObserver(()=>{if(panel.hidden)stopRecording();}).observe(panel,{attributes:true,attributeFilter:['hidden']});
+ window.addEventListener('pagehide',stopRecording);
+}
+
+initMetronomeFocus({start: startMetro, stop: stopMetro, isPlaying: () => playing});

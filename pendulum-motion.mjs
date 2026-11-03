@@ -33,3 +33,15 @@ export function pendulumAngleAtPhase(phase,amplitude=38){
   const angle=curve[index]+(curve[index+1]-curve[index])*(position-index);
   return (quarter<2?-1:1)*angle;
 }
+
+/** Phase after the centre crossing where an escapement click is displayed. */
+export function pendulumClickPhase(amplitude = 38, angle = 10) {
+  const target = Math.min(angle, amplitude * 0.9);
+  let low = 0, high = 0.5;
+  for (let i = 0; i < 24; i++) {
+    const middle = (low + high) / 2;
+    if (Math.abs(pendulumAngleAtPhase(middle, amplitude)) < target) low = middle;
+    else high = middle;
+  }
+  return (low + high) / 2;
+}

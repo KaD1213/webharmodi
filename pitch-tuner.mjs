@@ -3,6 +3,17 @@ const $=id=>document.getElementById(id);
 const names=['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
 const panel=$('panel-tuner'),scroll=$('pitchScroll'),canvas=$('pitchTrace'),axis=$('pitchAxis');
 let points=[],elapsed=0,stream=null,audio=null,source=null,timer=null,pending=false,run=0,last=0,connected=false,sample=false;
+const historySelect=$('tunerHistorySeconds');
+let historySeconds=8;
+try{const saved=Number(localStorage.getItem('webharmodi-tuner-history'));if(Number.isInteger(saved)&&saved>=4&&saved<=16)historySeconds=saved;}catch{}
+historySelect.value=String(historySeconds);
+function trimHistory(){const newest=points.at(-1)?.t||0;while(points.length&&newest-points[0].t>historySeconds)points.shift();}
+historySelect.onchange=()=>{
+ const next=Number(historySelect.value);if(!Number.isInteger(next)||next<4||next>16)return;
+ historySeconds=next;
+ try{localStorage.setItem('webharmodi-tuner-history',String(next));}catch{}
+ trimHistory();draw();
+};
 const noteName=m=>names[((m%12)+12)%12];
 function reading(f){
  const reference=Number($('reference').value)||442;
@@ -20,25 +31,67 @@ function append(f,dt){
  const p={...reading(f),frequency:f,t:elapsed,connect:connected};
  if(points.length&&p.nearest!==points.at(-1).nearest)p.connect=false;
  points.push(p);elapsed+=dt;connected=true;
- // Keep only the latest five seconds of voiced measurements.
- while(points.length&&p.t-points[0].t>5)points.shift();
+ // Keep the selected duration of voiced measurements; silence does not advance time.
+ trimHistory();
  showReading(p);draw();
 }
 function setup(c,w,h){
  const d=Math.min(devicePixelRatio||1,2);c.width=Math.round(w*d);c.height=Math.round(h*d);
  c.style.width=w+'px';c.style.height=h+'px';const g=c.getContext('2d');g.scale(d,d);return g;
 }
+// Equal temperament offsets: 1200 log2(5/4)-400 and 1200 log2(6/5)-300.
+const thirdGuides=[{cents:1200*Math.log2(5/4)-400,label:'−13.7',name:'長3度'},{cents:1200*Math.log2(6/5)-300,label:'+15.6',name:'短3度'}];
+function drawNeedle(g,w,h,p,dark){
+ // A light instrument face keeps the thin black needle visible in both themes.
+ const cx=w/2,ink=dark?'#f1f1f1':'#111111',muted=dark?'#aeb5be':'#646764';
+ g.save();g.globalAlpha=.22;g.fillStyle=dark?'#151b24':'#ffffff';g.fillRect(0,0,w,h);g.restore();
+ const noteSize=Math.min(78,Math.max(46,w*.18),h*.19);
+ g.fillStyle=ink;g.textAlign='center';g.font='600 '+noteSize+'px -apple-system,sans-serif';
+ g.fillText(noteName(p.nearest),cx,noteSize+10);
+ const header=noteSize+46,r=Math.max(24,Math.min((w-68)/1.94,h-header-22));
+ const py=header+r,extent=Math.PI*5/12;
+ const pos=(ct,radius)=>{const angle=Math.max(-50,Math.min(50,ct))/50*extent;return [cx+Math.sin(angle)*radius,py-Math.cos(angle)*radius];};
+ const fontSize=Math.max(12,Math.min(20,w*.042));
+ g.strokeStyle=muted;g.lineWidth=1;
+ g.beginPath();g.arc(cx,py,r,-Math.PI/2-extent,-Math.PI/2+extent);g.stroke();
+ for(let ct=-50;ct<=50;ct+=5){
+  const major=ct%10===0,[ax,ay]=pos(ct,r),[bx,by]=pos(ct,r-(major?16:8));
+  g.strokeStyle=ink;g.lineWidth=ct===0?2:1;
+  g.beginPath();g.moveTo(ax,ay);g.lineTo(bx,by);g.stroke();
+  if(major){const [tx,ty]=pos(ct,r+16);g.fillStyle=ink;g.font=fontSize+'px -apple-system,sans-serif';g.fillText(ct>0?'+'+ct:String(ct),tx,ty+4);}
+ }
+ // Small open guide marks, rather than prominent coloured dots.
+ for(const guide of thirdGuides){
+  const [tx,ty]=pos(guide.cents,r-23);g.strokeStyle=muted;g.lineWidth=1;
+  g.beginPath();g.moveTo(tx-3,ty+3);g.lineTo(tx,ty-2);g.lineTo(tx+3,ty+3);g.stroke();
+ }
+ const [nx,ny]=pos(p.cents,r-5);
+ g.strokeStyle=dark?'#f1f1f1':'#000000';g.lineWidth=1.5;g.lineCap='butt';
+ g.beginPath();g.moveTo(cx,py+5);g.lineTo(nx,ny);g.stroke();
+ g.fillStyle=dark?'#f1f1f1':'#000000';g.beginPath();g.arc(cx,py,3,0,Math.PI*2);g.fill();
+ g.font=Math.max(18,fontSize)+'px -apple-system,sans-serif';
+ g.fillText('♭',18,py);g.fillText('♯',w-18,py);
+}
+let lastDisplayMode=null,transitionImage=null,transitionStart=0,transitionFrame=0;
 function draw(){
  if(panel.hidden)return;
 
+ const mode=connected?'live':'history';
+ if(lastDisplayMode!==null&&mode!==lastDisplayMode&&canvas.width&&canvas.height){
+  transitionImage=document.createElement('canvas');transitionImage.width=canvas.width;transitionImage.height=canvas.height;
+  transitionImage.getContext('2d').drawImage(canvas,0,0);transitionStart=performance.now();
+ }
+ lastDisplayMode=mode;
+ axis.style.display='block';
  const viewportWidth=scroll.clientWidth;
  const newest=points.at(-1)?.t||0;
  const h=Math.max(120,scroll.clientHeight),w=viewportWidth;
  const dark=document.documentElement.dataset.theme==='dark';
  const fg=dark?'#afb6c2':'#646b77',line=dark?'#343b46':'#e1e4e9',accent=dark?'#8ab4f8':'#007aff';
  const g=setup(canvas,w,h),a=setup(axis,54,h);
- const headX=connected?w/2:w-16;
- const y=cents=>22+(50-cents)/100*(h-44),x=t=>headX-(newest-t)/5*Math.max(1,headX-12);
+ axis.style.visibility='visible';
+ const headX=w-16;
+ const y=cents=>22+(50-cents)/100*(h-44),x=t=>headX-(newest-t)/historySeconds*Math.max(1,headX-12);
  g.font='10px -apple-system,sans-serif';a.font='11px -apple-system,sans-serif';
  for(const cents of [-50,-25,0,25,50]){
   g.strokeStyle=cents===0?(dark?'#5caf9a':'#469d81'):line;
@@ -49,7 +102,7 @@ function draw(){
  a.fillStyle=fg;a.fillText('cent',3,11);
  // History moves left; only this layer is blurred during voiced input.
  g.save();
- if(connected){g.filter='blur(5px)';g.globalAlpha=.3;}
+ if(connected){g.filter='blur(2px)';g.globalAlpha=.8;}
  g.strokeStyle=accent;g.lineWidth=2;g.lineJoin='round';g.lineCap='round';g.beginPath();
  for(let i=0;i<points.length;i++){
   const p=points[i];if(!p.connect||!i)g.moveTo(x(p.t),y(p.cents));else g.lineTo(x(p.t),y(p.cents));
@@ -60,6 +113,7 @@ function draw(){
   g.fillStyle=fg;g.fillText(noteName(points[i].nearest),x(points[i].t),13);
  }
  g.restore();
+ if(connected&&points.length){drawNeedle(g,w,h,points.at(-1),dark);finishTransition(g,w,h);return;}
  if(points.length){
   const p=points.at(-1),cx=headX,cy=y(p.cents);
   // The live marker stays horizontally fixed, moving only with pitch (vertical).
@@ -74,6 +128,13 @@ function draw(){
    g.fillText((p.cents>=0?'+':'−')+Math.abs(p.cents).toFixed(1)+' ct',cx,66);
   }
  }
+ finishTransition(g,w,h);
+}
+function finishTransition(g,w,h){
+ if(!transitionImage)return;
+ const progress=Math.min(1,(performance.now()-transitionStart)/300);
+ if(progress<1){g.save();g.globalAlpha=1-progress;g.drawImage(transitionImage,0,0,w,h);g.restore();cancelAnimationFrame(transitionFrame);transitionFrame=requestAnimationFrame(draw);}
+ else transitionImage=null;
 }
 function stop(){
  run++;pending=false;clearInterval(timer);timer=null;
