@@ -450,16 +450,17 @@ function layoutMechanism(){
   const width=mechanism.clientWidth,height=mechanism.clientHeight;
   if(!width||!height)return;
   const portraitInstrument = $('panel-metronome').classList.contains('metro-expanded') && height > width;
-  pendulumAmplitude = portraitInstrument ? 32 : 38;
+  pendulumAmplitude = 38;
   const length = portraitInstrument
-    ? Math.max(24, Math.min(height-80,(width/2-26)/Math.sin(pendulumAmplitude*Math.PI/180)))
+    ? Math.max(24, Math.min(height-100,width*1.4))
     : Math.max(24,Math.min(height-50,(width/2-44)/Math.sin(38*Math.PI/180)));
-  const bodyHeight = portraitInstrument ? Math.min(height-24,length+105) : height-10;
+  if(portraitInstrument)pendulumAmplitude=Math.asin(Math.min(.62,(width/2-24)/length))*180/Math.PI;
+  const bodyHeight = portraitInstrument ? Math.min(height-24,length+110) : height-10;
   const bodyTop = portraitInstrument ? (height-bodyHeight)/2 : height-28-length-14;
   const bottom = portraitInstrument ? (height-bodyHeight)/2+28 : 28;
   mechanism.style.setProperty('--arm-length',length+'px');
   mechanism.style.setProperty('--rail-bottom',bottom+'px');
-  mechanism.style.setProperty('--body-width',(portraitInstrument ? Math.min(width-24,(length+40)*.72) : Math.min(width-12,(length+40)*.58))+'px');
+  mechanism.style.setProperty('--body-width',(portraitInstrument ? width-24 : Math.min(width-12,(length+40)*.58))+'px');
   mechanism.style.setProperty('--body-top',bodyTop+'px');
   mechanism.style.setProperty('--body-bottom',portraitInstrument ? (height-bodyHeight)/2+'px' : '10px');
   mechanism.style.setProperty('--foot-bottom',portraitInstrument ? (height-bodyHeight)/2-3+'px' : '7px');

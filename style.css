@@ -456,3 +456,9 @@ body.metro-focus-open{overflow:hidden}
 #panel-metronome.metro-expanded .mechanism:has(.rail.adjusting) #weightTempoReadout{display:block}
 .voice-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .voice-grid button:last-child{color:inherit}.voice-grid button.active:last-child{color:var(--blue)}
+#panel-metronome.metro-expanded .rail::before{content:'';position:absolute;top:0;bottom:0;left:calc(50% - 3px);width:6px;background:#222b36;border-radius:3px;pointer-events:none}
+#panel-metronome.metro-expanded .rail::after{width:13px;height:13px;background:#222b36}
+#panel-metronome.metro-expanded .tempo-weight{width:54px;height:28px;left:calc(50% - 27px);background:#f8fafc;border:2px solid #303e50;box-shadow:0 2px 8px #0003}
+html[data-theme=dark] #panel-metronome.metro-expanded .rail::before,html[data-theme=dark] #panel-metronome.metro-expanded .rail::after{background:#f2f5fa}
+html[data-theme=dark] #panel-metronome.metro-expanded .body-shape{background:#353d49}
+#panel-metronome.metro-expanded .tempo-weight{left:50%}
