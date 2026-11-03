@@ -911,14 +911,45 @@ syncAppearanceUI();
    if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){status.textContent='このブラウザでは録音できません。';return;}
    const id=++requestId;
    button.disabled=true;status.textContent='マイクの使用を許可してください';
-   let stream;
+   let stream,take;
+   let recordingFailed=false;
+   function restorePlayback(){
+     if(!$('panel-tuner').hidden)return;
+     try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch{}
+   }
+   function recordingError(error){
+     clearInterval(clockTimer);stream?.getTracks().forEach(track=>track.stop());
+     if(recorder===take)recorder=null;
+     restorePlayback();
+     if(id!==requestId)return;
+     button.disabled=false;recordingUI(false);$('takeClock').textContent='00:00';
+     const messages={
+       NotAllowedError:'録音するにはマイクの使用を許可してください。',
+       NotFoundError:'マイクが見つかりません。',
+       NotReadableError:'マイクを使用できません。他の録音・通話を終了して、もう一度試してください。',
+       NotSupportedError:'このブラウザで使える録音形式がありません。',
+       SecurityError:'マイクへのアクセスが制限されています。',
+       AbortError:'マイクの開始が中断されました。もう一度試してください。'
+     };
+     status.textContent=messages[error.name]||'録音を開始できませんでした（'+(error.name||'不明なエラー')+'）。';
+   }
    try{
+     // Safari must be allowed to capture audio after instrument playback.
+     try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch{}
      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-     if(id!==requestId||panel.hidden){stream.getTracks().forEach(t=>t.stop());return;}
-     const take=new MediaRecorder(stream),chunks=[],started=new Date();
+     if(id!==requestId||panel.hidden){stream.getTracks().forEach(t=>t.stop());restorePlayback();return;}
+     // Prefer native AAC on Safari and Opus on browsers that support it.
+     const mimeTypes=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+     const mimeType=mimeTypes.find(type=>MediaRecorder.isTypeSupported?.(type));
+     try{take=new MediaRecorder(stream,mimeType?{mimeType}:undefined);}
+     catch(error){if(error.name!=='NotSupportedError')throw error;take=new MediaRecorder(stream);}
+     const chunks=[],started=new Date();
+     take.onerror=event=>{recordingFailed=true;try{if(take.state!=='inactive')take.stop();}catch{}recordingError(event.error||new Error('録音エラー'));};
      const session=state.bpm+' BPM · A = '+state.reference+' Hz';
      take.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
      take.onstop=()=>{
+       if(recordingFailed)return;
+       restorePlayback();
        clearInterval(clockTimer);const length=time(Date.now()-started);$('takeClock').textContent='00:00';button.textContent='';stream.getTracks().forEach(t=>t.stop());recorder=null;
        button.disabled=false;recordingUI(false);
        if(!chunks.length){status.textContent='録音データがありません。';return;}
@@ -931,10 +962,7 @@ syncAppearanceUI();
        status.textContent='';
      };
      take.start();$('takeClock').textContent='00:00';clockTimer=setInterval(()=>{$('takeClock').textContent=time(Date.now()-started);},250);recorder=take;button.disabled=false;recordingUI(true);status.textContent='';
-   }catch(error){
-     stream?.getTracks().forEach(t=>t.stop());
-     if(id===requestId){button.disabled=false;status.textContent=error.name==='NotAllowedError'?'録音するにはマイクの使用を許可してください。':'マイクから録音を開始できませんでした。';}
-   }
+   }catch(error){recordingFailed=true;recordingError(error);}
  };
  new MutationObserver(()=>{if(panel.hidden)stopRecording();}).observe(panel,{attributes:true,attributeFilter:['hidden']});
  window.addEventListener('pagehide',stopRecording);
