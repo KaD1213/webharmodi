@@ -438,3 +438,14 @@ body.metro-focus-open{overflow:hidden}
 #panel-metronome.metro-expanded{grid-template-rows:minmax(0,1fr)}
 #panel-metronome.metro-expanded .metronome-card{padding-top:48px!important}
 #panel-metronome.metro-expanded .metro-focus-toolbar{top:0;right:0}
+/* Header retains its own height when a phone rotates into landscape. */
+.appbar{flex-shrink:0}
+@media(orientation:landscape) and (max-height:550px){
+ body{overflow:auto}
+ main{height:auto;min-height:100dvh;overflow:visible}
+ .appbar{position:relative;top:auto;flex:none;min-height:44px;margin-bottom:12px;align-items:center}
+ .appbar header{margin:0;min-width:0}
+ .appbar .tabs{position:relative;left:auto;bottom:auto;transform:none;grid-row:1;grid-column:2;width:100%;margin:0;min-width:0}
+ .appbar .app-actions{grid-row:1;grid-column:3}
+ #panel-harmony{flex:none;gap:0}
+}

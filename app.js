@@ -385,12 +385,19 @@ syncFullscreen();
 // Keep the native range for keyboard / assistive input, not invisible touch geometry.
 const tempoRail=$('tempoRail'),visibleWeight=$('visibleTempoWeight');
 let weightDrag=null;
+let pendulumAmplitude=38;
 // Reserve the complete swing envelope, rather than shifting the arm off-center.
 function layoutMechanism(){
   const mechanism=tempoRail.closest('.mechanism');
   const width=mechanism.clientWidth,height=mechanism.clientHeight;
   if(!width||!height)return;
-  const length=Math.max(24,Math.min(height-50,(width/2-44)/Math.sin(38*Math.PI/180)));
+  const portraitInstrument = $('panel-metronome').classList.contains('metro-expanded') && height > width;
+  const length = portraitInstrument
+    ? Math.max(24, height - 50)
+    : Math.max(24,Math.min(height-50,(width/2-44)/Math.sin(38*Math.PI/180)));
+  pendulumAmplitude = portraitInstrument
+    ? Math.min(38, Math.asin(Math.min(1, Math.max(12, width/2-30)/length))*180/Math.PI)
+    : 38;
   mechanism.style.setProperty('--arm-length',length+'px');
   mechanism.style.setProperty('--body-width',Math.min(width-12,(length+40)*.58)+'px');
   mechanism.style.setProperty('--body-top',(height-28-length-14)+'px');
@@ -412,7 +419,7 @@ function paintPendulum(){
     const phase=now<from.time?from.phase:to?from.phase+(to.phase-from.phase)*(now-from.time)/(to.time-from.time):from.phase+(now-from.time)*state.bpm/60;
     // Finite-amplitude pendulum: slow reversal, fast central crossing.
     // The central beat reference alternates direction; subdivisions do not speed up the arm.
-    const amplitude = reducedMotion.matches ? 6 : 38;
+    const amplitude = reducedMotion.matches ? Math.min(6,pendulumAmplitude) : pendulumAmplitude;
     // Keep the audio beat clock exact; align each click just beyond centre.
     setPendulumAngle(pendulumDirection * pendulumAngleAtPhase(phase + pendulumClickPhase(amplitude), amplitude));
   }

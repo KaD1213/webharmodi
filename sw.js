@@ -1,5 +1,5 @@
 'use strict';
-const release='14a1a4ea7ee87bc1';
+const release='7e8625eabdb45c48';
 const prefix='webharmodi:'+new URL(self.registration.scope).pathname+':';
 const cacheName=prefix+release;
 const files=['./','./index.html','./style.css?v='+release,'./themes.css?v='+release,'./app.js?v='+release,'./adaptive-ji.mjs','./tap-tempo.mjs','./pendulum-motion.mjs','./meter-state.mjs','./pitch-detector.mjs','./pitch-tuner.mjs','./metronome-focus.mjs','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
