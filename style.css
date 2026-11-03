@@ -462,3 +462,13 @@ body.metro-focus-open{overflow:hidden}
 html[data-theme=dark] #panel-metronome.metro-expanded .rail::before,html[data-theme=dark] #panel-metronome.metro-expanded .rail::after{background:#f2f5fa}
 html[data-theme=dark] #panel-metronome.metro-expanded .body-shape{background:#353d49}
 #panel-metronome.metro-expanded .tempo-weight{left:50%}
+.take-head #recordToggle{position:relative;isolation:isolate;overflow:visible}
+.take-head #recordToggle[data-recording=true]::after{content:'';position:absolute;inset:-3px;border:2px solid #ed4452;border-radius:50%;pointer-events:none;animation:record-ripple 1.6s ease-out infinite}
+@keyframes record-ripple{0%{transform:scale(1);opacity:.65}100%{transform:scale(1.65);opacity:0}}
+.take-scrubber{margin-top:9px;min-width:0}
+.take-scrubber input[type=range]{display:block;width:100%;margin:0;height:28px;min-height:28px;touch-action:none;accent-color:var(--blue);cursor:pointer}
+.take-times{display:flex;justify-content:space-between;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted);line-height:1.4}
+@media(prefers-reduced-motion:reduce){.take-head #recordToggle[data-recording=true]::after{animation:none;opacity:.5;transform:scale(1.18)}}
+.take-head #recordToggle[data-recording=true]::after{content:none;animation:none}
+#recordWaveform{display:block;width:100%;height:100px;margin:18px 0 8px;pointer-events:none}
+#recordWaveform[hidden]{display:none}

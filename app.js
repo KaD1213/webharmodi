@@ -1,3 +1,4 @@
+import {createRecordingWaveform} from './recording-waveform.mjs';
 import {createKeyboardVoice} from './keyboard-voices.mjs';
 import {initMetronomeFocus} from './metronome-focus.mjs';
 'use strict';
@@ -805,11 +806,32 @@ syncAppearanceUI();
    button.setAttribute('aria-label',button.title);
  }
  let closeOpenRow=null;
- function mountTake(row,player,save,label,detail){
+ function mountTake(row,player,save,label,detail,recordedSeconds){
    const face=document.createElement('div'),info=document.createElement('div');
    const play=document.createElement('button'),del=document.createElement('button');
    face.className='take-face';info.className='take-info';play.className='take-play';del.className='take-delete';
    const meta=document.createElement('small');meta.textContent=detail;info.append(label,meta);
+   const scrubber=document.createElement('div'),seek=document.createElement('input'),times=document.createElement('div');
+   scrubber.className='take-scrubber';times.className='take-times';
+   const current=document.createElement('span'),total=document.createElement('span');times.append(current,total);
+   seek.type='range';seek.min='0';seek.step='.01';seek.value='0';
+   let duration=recordedSeconds,scrubbing=false;
+   const updateTimeline=()=>{
+     if(Number.isFinite(player.duration)&&player.duration>0)duration=player.duration;
+     seek.max=String(Math.max(.01,duration));seek.disabled=!(duration>0);
+     if(!scrubbing)seek.value=String(Number.isFinite(player.currentTime)?player.currentTime:0);
+     current.textContent=time(Number(seek.value)*1000);total.textContent=time(duration*1000);
+     seek.setAttribute('aria-label',label.textContent+'の再生位置');
+     seek.setAttribute('aria-valuetext',current.textContent+' / '+total.textContent);
+     seek.style.setProperty('--played',Math.min(100,Number(seek.value)/Math.max(.01,duration)*100)+'%');
+   };
+   seek.oninput=()=>{try{player.currentTime=Math.min(duration,Number(seek.value));}catch{}updateTimeline();};
+   seek.onpointerdown=e=>{scrubbing=true;e.stopPropagation();};
+   const finishSeek=()=>{scrubbing=false;updateTimeline();};
+   seek.onpointerup=seek.onpointercancel=seek.onchange=finishSeek;
+   scrubber.addEventListener('keydown',e=>e.stopPropagation());
+   for(const event of ['loadedmetadata','durationchange','timeupdate','seeked','ended'])player.addEventListener(event,updateTimeline);
+   scrubber.append(seek,times);info.append(scrubber);updateTimeline();
    del.textContent='削除';
    const actionWidth=76;
    function position(offset){
@@ -862,7 +884,7 @@ syncAppearanceUI();
    label.onpointerdown=e=>{if(e.isPrimary&&e.button===0){cancelRenameHold();renameTimer=setTimeout(editName,500);}};
 
    face.onpointerdown=e=>{
-     if(editing||!e.isPrimary||e.button!==0)return;
+     if(editing||e.target.closest('.take-scrubber')||!e.isPrimary||e.button!==0)return;
      if(closeOpenRow!==close)closeOpenRow?.();
      swiped=false;
      const transform=getComputedStyle(face).transform;
@@ -911,14 +933,14 @@ syncAppearanceUI();
    if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){status.textContent='このブラウザでは録音できません。';return;}
    const id=++requestId;
    button.disabled=true;status.textContent='マイクの使用を許可してください';
-   let stream,take;
+   let stream,take,waveform;
    let recordingFailed=false;
    function restorePlayback(){
      if(!$('panel-tuner').hidden)return;
      try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch{}
    }
    function recordingError(error){
-     clearInterval(clockTimer);stream?.getTracks().forEach(track=>track.stop());
+     waveform?.stop();clearInterval(clockTimer);stream?.getTracks().forEach(track=>track.stop());
      if(recorder===take)recorder=null;
      restorePlayback();
      if(id!==requestId)return;
@@ -936,8 +958,9 @@ syncAppearanceUI();
    try{
      // Safari must be allowed to capture audio after instrument playback.
      try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch{}
+     waveform=createRecordingWaveform($('recordWaveform'));
      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-     if(id!==requestId||panel.hidden){stream.getTracks().forEach(t=>t.stop());restorePlayback();return;}
+     if(id!==requestId||panel.hidden){waveform?.stop();stream.getTracks().forEach(t=>t.stop());restorePlayback();return;}
      // Prefer native AAC on Safari and Opus on browsers that support it.
      const mimeTypes=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
      const mimeType=mimeTypes.find(type=>MediaRecorder.isTypeSupported?.(type));
@@ -949,7 +972,7 @@ syncAppearanceUI();
      take.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
      take.onstop=()=>{
        if(recordingFailed)return;
-       restorePlayback();
+       waveform?.stop();restorePlayback();
        clearInterval(clockTimer);const length=time(Date.now()-started);$('takeClock').textContent='00:00';button.textContent='';stream.getTracks().forEach(t=>t.stop());recorder=null;
        button.disabled=false;recordingUI(false);
        if(!chunks.length){status.textContent='録音データがありません。';return;}
@@ -958,10 +981,10 @@ syncAppearanceUI();
        label.textContent='録音'+String(++count).padStart(2,'0');
        player.controls=true;player.src=url;save.href=url;
        save.download='WebHarmoDi-'+started.toISOString().replace(/:/g,'-')+(/mp4/i.test(type)?'.m4a':/ogg/i.test(type)?'.ogg':'.webm');
-       save.textContent='↓';save.title='ダウンロード';save.setAttribute('aria-label',label.textContent+'をダウンロード');mountTake(row,player,save,label,length+' · '+session);
+       save.textContent='↓';save.title='ダウンロード';save.setAttribute('aria-label',label.textContent+'をダウンロード');mountTake(row,player,save,label,length+' · '+session,Math.max(.01,(Date.now()-started)/1000));
        status.textContent='';
      };
-     take.start();$('takeClock').textContent='00:00';clockTimer=setInterval(()=>{$('takeClock').textContent=time(Date.now()-started);},250);recorder=take;button.disabled=false;recordingUI(true);status.textContent='';
+     take.start();waveform.start(stream);$('takeClock').textContent='00:00';clockTimer=setInterval(()=>{$('takeClock').textContent=time(Date.now()-started);},250);recorder=take;button.disabled=false;recordingUI(true);status.textContent='';
    }catch(error){recordingFailed=true;recordingError(error);}
  };
  new MutationObserver(()=>{if(panel.hidden)stopRecording();}).observe(panel,{attributes:true,attributeFilter:['hidden']});
