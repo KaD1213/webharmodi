@@ -1,3 +1,4 @@
+import {createKeyboardVoice} from './keyboard-voices.mjs';
 import {initMetronomeFocus} from './metronome-focus.mjs';
 'use strict';
 import {AdaptiveJustIntonation, applyJustIntonation} from './adaptive-ji.mjs';
@@ -37,7 +38,7 @@ $('themeToggle').onclick=()=>{
 };
 themeQuery.addEventListener('change',()=>{if(themePreference==='system')syncTheme();});
 syncTheme();
-const state={transpose:0,voice:'Fl',pure:false,hold:false,oct:0,reference:442,balance:0,bpm:100,beats:4,accent:true,clickVoice:'wood',rhythmMode:1};
+const state={transpose:0,voice:'Fl',pure:false,hold:false,oct:0,reference:442,balance:0,bpm:100,beats:4,accent:true,clickVoice:'analog',rhythmMode:1};
 // Restore only bounded musical settings. Playback and held notes never auto-start.
 let saved={};
 try{saved=JSON.parse(localStorage.getItem('webharmodi-settings')||'{}')||{};}catch{}
@@ -46,7 +47,7 @@ for(const [name,[min,max]] of Object.entries(numericSettings)){
   if(typeof saved[name]==='number'&&Number.isFinite(saved[name]))state[name]=Math.max(min,Math.min(max,saved[name]));
 }
 state.beats=Math.round(state.beats);state.bpm=Math.round(state.bpm);
-for(const [name,allowed] of Object.entries({transpose:[0,-2,3,5],voice:['Piano','Fl','Cl','Brass','Organ'],clickVoice:['wood','beep','click'],rhythmMode:[1,2,3,4]})){
+for(const [name,allowed] of Object.entries({transpose:[0,-2,3,5],voice:['Piano','Fl','Cl','Brass','Organ','PipeOrgan'],clickVoice:['analog','wood','beep','click'],rhythmMode:[1,2,3,4]})){
   if(allowed.includes(saved[name]))state[name]=saved[name];
 }
 for(const name of ['pure','accent'])if(typeof saved[name]==='boolean')state[name]=saved[name];
@@ -68,8 +69,8 @@ const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 function balanceGains(){
   const position=(state.balance+100)/200;
   // Equal-power crossfade: keep the combined energy steady while moving the mix.
-  // Fixed calibration compensates for the different tone/click envelopes.
-  return {harmony:position===1?0:.12*Math.cos(position*Math.PI/2),metronome:position===0?0:.28*Math.sin(position*Math.PI/2)};
+  // Chords need extra headroom before output amplification; retain the click level.
+  return {harmony:position===1?0:.045*Math.cos(position*Math.PI/2),metronome:position===0?0:.28*Math.sin(position*Math.PI/2)};
 }
 function syncBalance(){
   $('balance').value=state.balance;
@@ -112,11 +113,22 @@ function audio(){try{if(navigator.audioSession)navigator.audioSession.type='play
     if(!Audio)throw new Error('このブラウザでは音声を再生できません。');
     ctx=new Audio({latencyHint:'interactive'});master=ctx.createGain();metroMaster=ctx.createGain();
     const gains=balanceGains();master.gain.value=gains.harmony;metroMaster.gain.value=gains.metronome;
-    // Reserve output headroom for full chords and the metronome together.
+    // Raise both sources together, preserving the balance control.
+    // Compression restrains dense chords before the 12 dB output boost.
     const compressor=ctx.createDynamicsCompressor();
-    compressor.threshold.value=-10;compressor.knee.value=8;compressor.ratio.value=16;
-    compressor.attack.value=.003;compressor.release.value=.12;
-    master.connect(compressor);metroMaster.connect(compressor);compressor.connect(ctx.destination);
+    compressor.threshold.value=-14;compressor.knee.value=6;compressor.ratio.value=20;
+    compressor.attack.value=.002;compressor.release.value=.10;
+    const outputBoost=ctx.createGain();outputBoost.gain.value=4;
+    // A soft ceiling catches short transients without digital clipping.
+    const ceiling=ctx.createWaveShaper();
+    const curve=new Float32Array(8193);
+    for(let i=0;i<curve.length;i++){
+      const value=i/(curve.length-1)*2-1,magnitude=Math.abs(value);
+      curve[i]=magnitude<=.8?value:Math.sign(value)*(.8+.18*Math.tanh((magnitude-.8)/.18));
+    }
+    ceiling.curve=curve;
+    master.connect(compressor);metroMaster.connect(compressor);
+    compressor.connect(outputBoost);outputBoost.connect(ceiling);ceiling.connect(ctx.destination);
     ctx.addEventListener('statechange',()=>{
       if(ctx.state==='interrupted'||ctx.state==='closed'){stopNotes();stopMetro();}
     });
@@ -125,7 +137,7 @@ function audio(){try{if(navigator.audioSession)navigator.audioSession.type='play
   return ctx;
 }
 const spectra={Fl:[1,.12,.06,.02],Cl:[1,0,.55,0,.25,0,.12],Brass:[1,.7,.5,.35,.23,.16],Organ:[1,.45,.3,.15,.1],Piano:[1,.5,.28,.14,.07]};
-function makeVoice(key){audio();const t=ctx.currentTime,midi=60+key+state.transpose+12*state.oct,osc=ctx.createOscillator(),gain=ctx.createGain();const spec=spectra[state.voice],real=new Float32Array(spec.length+1),imag=new Float32Array(spec.length+1);spec.forEach((v,i)=>imag[i+1]=v);osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));osc.frequency.value=state.reference*2**((midi-69)/12);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.7,t+.02);if(state.voice==='Piano'){gain.gain.exponentialRampToValueAtTime(.1,t+.9);gain.gain.exponentialRampToValueAtTime(.001,t+4);}osc.connect(gain).connect(master);return {osc,gain,midi,started:false};}
+function makeVoice(key){audio();if(state.voice==='Piano'||state.voice==='PipeOrgan')return createKeyboardVoice(ctx,master,60+key+state.transpose+12*state.oct,state.reference,state.voice);const t=ctx.currentTime,midi=60+key+state.transpose+12*state.oct,osc=ctx.createOscillator(),gain=ctx.createGain();const spec=spectra[state.voice],real=new Float32Array(spec.length+1),imag=new Float32Array(spec.length+1);spec.forEach((v,i)=>imag[i+1]=v);osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));osc.frequency.value=state.reference*2**((midi-69)/12);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.7,t+.02);if(state.voice==='Piano'){gain.gain.exponentialRampToValueAtTime(.1,t+.9);gain.gain.exponentialRampToValueAtTime(.001,t+4);}osc.connect(gain).connect(master);return {osc,gain,midi,started:false};}
 function release(key,recalculate=true){const v=active.get(key);if(!v)return;const param=v.gain.gain;if(param.cancelAndHoldAtTime)param.cancelAndHoldAtTime(ctx.currentTime);else{param.cancelScheduledValues(ctx.currentTime);param.setValueAtTime(param.value,ctx.currentTime);}param.setTargetAtTime(0,ctx.currentTime,.018);try{v.osc.stop(ctx.currentTime+.12);}catch{}v.osc.onended=()=>{v.osc.disconnect();v.gain.disconnect();};active.delete(key);if(recalculate)retune();}
 function press(key,owner){
   if(owners.has(owner))return;
@@ -158,7 +170,7 @@ function renderNotes(){
   });
 }
 function group(id,items,current,select){const container=$(id),focused=container.contains(document.activeElement)?document.activeElement.textContent:null;container.innerHTML='';items.forEach(([value,label])=>{const b=document.createElement('button');b.textContent=label;b.classList.toggle('active',value===current);b.setAttribute('aria-pressed',String(value===current));if(value==='Custom'){b.setAttribute('aria-disabled','true');b.title='準備中';}b.onclick=()=>select(value);container.append(b);if(label===focused)b.focus({preventScroll:true});});}
-function drawControls(){group('transpose',[[0,'C'],[-2,'B♭'],[3,'E♭'],[5,'F']],state.transpose,v=>{state.transpose=v;tuner.reset();refreshVoices();drawControls();});group('voices',['Piano','Fl','Cl','Brass','Organ'].map(v=>[v,v]),state.voice,v=>{if(v==='Custom')return;state.voice=v;refreshVoices();drawControls();});group('temperament',[[false,'平均律'],[true,'純正律']],state.pure,v=>{state.pure=v;retune();drawControls();});$('doInfo').textContent='ド = '+noteNames[(state.transpose+12)%12];$('pitchInfo').textContent=`A = ${state.reference} Hz · ${state.pure?'純正律 · '+noteNames[contextKey]+(contextMode==='major'?' 長調':' 短調'):'平均律'}`;renderNotes();setRange(viewIndex);}
+function drawControls(){group('transpose',[[0,'C'],[-2,'B♭'],[3,'E♭'],[5,'F']],state.transpose,v=>{state.transpose=v;tuner.reset();refreshVoices();drawControls();});group('voices',['Piano','Fl','Cl','Brass','Organ','PipeOrgan'].map(v=>[v,v==='PipeOrgan'?'Pipe':v]),state.voice,v=>{if(v==='Custom')return;state.voice=v;refreshVoices();drawControls();});group('temperament',[[false,'平均律'],[true,'純正律']],state.pure,v=>{state.pure=v;retune();drawControls();});$('doInfo').textContent='ド = '+noteNames[(state.transpose+12)%12];$('pitchInfo').textContent=`A = ${state.reference} Hz · ${state.pure?'純正律 · '+noteNames[contextKey]+(contextMode==='major'?' 長調':' 短調'):'平均律'}`;renderNotes();setRange(viewIndex);}
 const keyMap=['a','w','s','e','d','f','t','g','y','h','u','j','k','o','l','p',';'];
 // A fixed C2–C7 instrument; navigation changes only the visible window.
 const firstKey=-24,lastKey=36,visibleWhites=15;
@@ -292,7 +304,31 @@ function drawTempoScale(){
     $('tempoScale').append(mark);
   });
 }
-function clickAt(time,level,strong){if(level<=0)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=state.clickVoice==='wood'?'triangle':state.clickVoice==='beep'?'sine':'square';o.frequency.setValueAtTime(state.clickVoice==='wood'?(strong?1500:950):state.clickVoice==='beep'?(strong?1320:880):(strong?2200:1500),time);g.gain.setValueAtTime(0,time);g.gain.linearRampToValueAtTime(level*(strong?1:.65),time+.001);g.gain.exponentialRampToValueAtTime(.0001,time+(state.clickVoice==='beep'?.065:.025));o.connect(g).connect(metroMaster);scheduled.add(o);o.onended=()=>{scheduled.delete(o);o.disconnect();g.disconnect();};o.start(time);o.stop(time+.08);}
+// Samples extracted from the supplied mechanical metronome recording.
+const mechanicalLoads=new WeakMap(),mechanicalBuffers=new WeakMap();
+function loadMechanical(context){
+  if(!mechanicalLoads.has(context)){
+    const promise=Promise.all(['mechanical-tick','mechanical-tock'].map(async name=>{
+      const response=await fetch(new URL('./audio/'+name+'.wav',import.meta.url));
+      if(!response.ok)throw new Error('録音音源を読み込めませんでした。');
+      return context.decodeAudioData(await response.arrayBuffer());
+    })).then(buffers=>{mechanicalBuffers.set(context,buffers);})
+      .catch(error=>{mechanicalLoads.delete(context);throw error;});
+    mechanicalLoads.set(context,promise);
+  }
+  return mechanicalLoads.get(context);
+}
+function mechanicalClick(time,level,strong){
+  const buffers=mechanicalBuffers.get(ctx);
+  if(!buffers)return;
+  const source=ctx.createBufferSource(),gain=ctx.createGain();
+  source.buffer=buffers[Math.floor(tick/12)%2];
+  gain.gain.value=level*(strong?1:.8);
+  source.connect(gain).connect(metroMaster);scheduled.add(source);
+  source.onended=()=>{scheduled.delete(source);source.disconnect();gain.disconnect();};
+  source.start(time);
+}
+function clickAt(time,level,strong){if(level<=0)return;if(state.clickVoice==='analog'){mechanicalClick(time,level,strong);return;}const o=ctx.createOscillator(),g=ctx.createGain();o.type=state.clickVoice==='wood'?'triangle':state.clickVoice==='beep'?'sine':'square';o.frequency.setValueAtTime(state.clickVoice==='wood'?(strong?1500:950):state.clickVoice==='beep'?(strong?1320:880):(strong?2200:1500),time);g.gain.setValueAtTime(0,time);g.gain.linearRampToValueAtTime(level*(strong?1:.65),time+.001);g.gain.exponentialRampToValueAtTime(.0001,time+(state.clickVoice==='beep'?.065:.025));o.connect(g).connect(metroMaster);scheduled.add(o);o.onended=()=>{scheduled.delete(o);o.disconnect();g.disconnect();};o.start(time);o.stop(time+.08);}
 function scheduler(){
   // A blocked main thread must not replay a backlog of clicks all at once.
   if(playing&&nextTime<ctx.currentTime-.05)nextTime=ctx.currentTime+.015;
@@ -302,13 +338,27 @@ function scheduler(){
     if(pendulumFrames.length>256)pendulumFrames.splice(0,pendulumFrames.length-256);
     if(sub%(12/state.rhythmMode)===0)clickAt(nextTime,.8,state.accent&&beat===0&&sub===0);if(sub===0){const gen=generation;const id=setTimeout(()=>{visualTimers.delete(id);if(gen!==generation)return;document.querySelectorAll('.dot').forEach((el,i)=>el.classList.toggle('lit',i===beat));},Math.max(0,(nextTime-ctx.currentTime)*1000));visualTimers.add(id);}tick++;nextTime+=60/state.bpm/12;}
 }
-function startMetro(direction = -1){if(playing)return;pendulumDirection = direction === 1 ? -1 : 1;try{audio();}catch(error){toast(error.message);return;}playing=true;generation++;tick=0;pendulumFrames=[];nextTime=ctx.currentTime+.05;timer=setInterval(scheduler,25);scheduler();startPendulum();$('play').textContent='停止';$('play').classList.add('playing');$('play').setAttribute('aria-pressed','true');$('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム（再生中）');syncWakeLock();}
+async function startMetro(direction = -1){
+ if(playing)return;
+ pendulumDirection=direction===1?-1:1;
+ let context;
+ try{context=audio();}catch(error){toast(error.message);return;}
+ playing=true;const attempt=++generation;
+ try{if(context.state!=='running')await context.resume();if(state.clickVoice==='analog')await loadMechanical(context);}
+ catch{if(attempt===generation){stopMetro();toast('音声または録音音源を開始できませんでした。もう一度操作してください。');}return;}
+ if(!playing||attempt!==generation)return;
+ if(context.state!=='running'){stopMetro();toast('音声を開始するには、もう一度操作してください。');return;}
+ tick=0;pendulumFrames=[];nextTime=context.currentTime+.05;
+ timer=setInterval(scheduler,25);scheduler();startPendulum();
+ $('play').textContent='停止';$('play').classList.add('playing');$('play').setAttribute('aria-pressed','true');
+ $('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム（再生中）');syncWakeLock();
+}
 function stopMetro(){playing=false;stopPendulum();generation++;clearInterval(timer);visualTimers.forEach(clearTimeout);visualTimers.clear();scheduled.forEach(o=>{try{o.stop();}catch{}});scheduled.clear();$('play').textContent='開始';$('play').classList.remove('playing');$('play').setAttribute('aria-pressed','false');$('tab-metronome').dataset.active='false';$('tab-metronome').setAttribute('aria-label','メトロノーム');document.querySelectorAll('.dot').forEach(el=>el.classList.remove('lit'));syncWakeLock();}
 function drawDots(){$('beatDots').innerHTML='<span class="dot"></span>'.repeat(state.beats);}
 function setBpm(n,{fromTap=false}={}){
   if(!fromTap)tapTempo.reset();
   if(!Number.isFinite(n))n=100;
-  state.bpm=Math.round(Math.max(40,Math.min(208,n)));$('bpm').value=state.bpm;
+  state.bpm=Math.round(Math.max(40,Math.min(208,n)));$('bpm').value=state.bpm;$('weightTempoReadout').textContent=state.bpm+' BPM';
   const high=tempoMarks.findIndex(mark=>mark>=state.bpm);
   const index=high===0?0:high-1+(state.bpm-tempoMarks[high-1])/(tempoMarks[high]-tempoMarks[high-1]);
   $('tempoWeight').value=Math.round(index);$('tempoWeight').setAttribute('aria-valuetext',state.bpm+' BPM');
@@ -321,7 +371,7 @@ function recordTap(){const bpm=tapTempo.tap(performance.now());if(bpm!==null){se
 // Measure the press, not the release; different finger hold times do not affect BPM.
 $('tap').onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();recordTap();};
 $('tap').onclick=e=>{if(e.detail===0)recordTap();};
-$('beats').onchange=e=>setMeter(e.target.value);$('accent').onchange=e=>state.accent=e.target.checked;$('clickVoice').onchange=e=>state.clickVoice=e.target.value;
+$('beats').onchange=e=>setMeter(e.target.value);$('accent').onchange=e=>state.accent=e.target.checked;$('clickVoice').onchange=e=>{const restart=playing;if(restart)stopMetro();state.clickVoice=e.target.value;if(restart)startMetro();};
 
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.target.matches('input,select,textarea')||$('settingsDialog').open||$('fullscreenHelp').open)return;if(e.code==='Space'){if(e.target.closest('button'))return;e.preventDefault();if(!e.repeat)playing?stopMetro():startMetro();return;}const key=keyMap.indexOf(e.key.toLowerCase());if(key>=0){e.preventDefault();if(!e.repeat)press(viewStart+key,'k'+e.code);}});
 document.addEventListener('keyup',e=>unpress('k'+e.code));window.addEventListener('blur',()=>{for(const owner of [...owners.keys()])if(!owner.startsWith('m:'))unpress(owner,true);});document.addEventListener('visibilitychange',()=>{if(document.hidden){stopNotes();stopMetro();}else syncWakeLock();});
@@ -392,15 +442,19 @@ function layoutMechanism(){
   const width=mechanism.clientWidth,height=mechanism.clientHeight;
   if(!width||!height)return;
   const portraitInstrument = $('panel-metronome').classList.contains('metro-expanded') && height > width;
+  pendulumAmplitude = portraitInstrument ? 32 : 38;
   const length = portraitInstrument
-    ? Math.max(24, height - 50)
+    ? Math.max(24, Math.min(height-80,(width/2-26)/Math.sin(pendulumAmplitude*Math.PI/180)))
     : Math.max(24,Math.min(height-50,(width/2-44)/Math.sin(38*Math.PI/180)));
-  pendulumAmplitude = portraitInstrument
-    ? Math.min(38, Math.asin(Math.min(1, Math.max(12, width/2-30)/length))*180/Math.PI)
-    : 38;
+  const bodyHeight = portraitInstrument ? Math.min(height-24,length+105) : height-10;
+  const bodyTop = portraitInstrument ? (height-bodyHeight)/2 : height-28-length-14;
+  const bottom = portraitInstrument ? (height-bodyHeight)/2+28 : 28;
   mechanism.style.setProperty('--arm-length',length+'px');
-  mechanism.style.setProperty('--body-width',Math.min(width-12,(length+40)*.58)+'px');
-  mechanism.style.setProperty('--body-top',(height-28-length-14)+'px');
+  mechanism.style.setProperty('--rail-bottom',bottom+'px');
+  mechanism.style.setProperty('--body-width',(portraitInstrument ? Math.min(width-24,(length+40)*.72) : Math.min(width-12,(length+40)*.58))+'px');
+  mechanism.style.setProperty('--body-top',bodyTop+'px');
+  mechanism.style.setProperty('--body-bottom',portraitInstrument ? (height-bodyHeight)/2+'px' : '10px');
+  mechanism.style.setProperty('--foot-bottom',portraitInstrument ? (height-bodyHeight)/2-3+'px' : '7px');
   drawTempoScale();
 }
 new ResizeObserver(layoutMechanism).observe(tempoRail.closest('.mechanism'));
@@ -877,4 +931,4 @@ syncAppearanceUI();
  window.addEventListener('pagehide',stopRecording);
 }
 
-initMetronomeFocus({start: startMetro, stop: stopMetro, isPlaying: () => playing});
+initMetronomeFocus({start: startMetro, stop: stopMetro, isPlaying: () => playing, prepareAudio: () => {try {const context=audio();const source=context.createBufferSource();source.buffer=context.createBuffer(1,1,context.sampleRate);source.connect(context.destination);source.start();}catch(error){toast(error.message);}}});

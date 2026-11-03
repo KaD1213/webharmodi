@@ -449,3 +449,10 @@ body.metro-focus-open{overflow:hidden}
  .appbar .app-actions{grid-row:1;grid-column:3}
  #panel-harmony{flex:none;gap:0}
 }
+.mechanism .rail{bottom:var(--rail-bottom,28px)}
+.mechanism .body-shape{bottom:var(--body-bottom,10px)}
+.mechanism .metronome-foot{bottom:var(--foot-bottom,7px)}
+#weightTempoReadout{display:none;position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:clamp(28px,7vw,48px);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;z-index:5;color:inherit;pointer-events:none}
+#panel-metronome.metro-expanded .mechanism:has(.rail.adjusting) #weightTempoReadout{display:block}
+.voice-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.voice-grid button:last-child{color:inherit}.voice-grid button.active:last-child{color:var(--blue)}

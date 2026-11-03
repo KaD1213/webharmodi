@@ -1,4 +1,4 @@
-export function initMetronomeFocus({start, stop, isPlaying}) {
+export function initMetronomeFocus({start, stop, isPlaying, prepareAudio}) {
   const panel = document.getElementById('panel-metronome');
   const button = document.getElementById('metroFocus');
   const appbar = document.querySelector('.appbar');
@@ -16,6 +16,7 @@ export function initMetronomeFocus({start, stop, isPlaying}) {
   }, true);
   panel.addEventListener('pointerdown', event => {
     if (!expanded || !event.isPrimary || event.button !== 0 || button.contains(event.target)) return;
+    prepareAudio();
     const bounds = weight.getBoundingClientRect();
     if (event.clientX >= bounds.left - 14 && event.clientX <= bounds.right + 14 && event.clientY >= bounds.top - 14 && event.clientY <= bounds.bottom + 14) return;
     event.preventDefault();event.stopImmediatePropagation();
