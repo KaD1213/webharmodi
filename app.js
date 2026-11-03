@@ -107,35 +107,43 @@ function retune(){
   renderNotes();
   syncWakeLock();
 }
-function audio(){try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch{}
+function audio(){
   if(!ctx||ctx.state==='closed'){
     const Audio=window.AudioContext||window.webkitAudioContext;
     if(!Audio)throw new Error('このブラウザでは音声を再生できません。');
-    ctx=new Audio({latencyHint:'interactive'});master=ctx.createGain();metroMaster=ctx.createGain();
-    const gains=balanceGains();master.gain.value=gains.harmony;metroMaster.gain.value=gains.metronome;
-    // Raise both sources together, preserving the balance control.
-    // Compression restrains dense chords before the 12 dB output boost.
-    const compressor=ctx.createDynamicsCompressor();
-    compressor.threshold.value=-14;compressor.knee.value=6;compressor.ratio.value=20;
-    compressor.attack.value=.002;compressor.release.value=.10;
-    const outputBoost=ctx.createGain();outputBoost.gain.value=4;
-    // A soft ceiling catches short transients without digital clipping.
-    const ceiling=ctx.createWaveShaper();
-    const curve=new Float32Array(8193);
-    for(let i=0;i<curve.length;i++){
-      const value=i/(curve.length-1)*2-1,magnitude=Math.abs(value);
-      curve[i]=magnitude<=.8?value:Math.sign(value)*(.8+.18*Math.tanh((magnitude-.8)/.18));
-    }
-    ceiling.curve=curve;
-    master.connect(compressor);metroMaster.connect(compressor);
-    compressor.connect(outputBoost);outputBoost.connect(ceiling);ceiling.connect(ctx.destination);
-    ctx.addEventListener('statechange',()=>{
-      if(ctx.state==='interrupted'||ctx.state==='closed'){stopNotes();stopMetro();}
+    let next;
+    try{
+      // Change the iOS audio session once, rather than during each note/voice update.
+      try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback';}catch{}
+      next=new Audio({latencyHint:'interactive'});
+      const harmony=next.createGain(),metronome=next.createGain();
+      const gains=balanceGains();harmony.gain.value=gains.harmony;metronome.gain.value=gains.metronome;
+      const compressor=next.createDynamicsCompressor();
+      compressor.threshold.value=-14;compressor.knee.value=6;compressor.ratio.value=20;
+      compressor.attack.value=.002;compressor.release.value=.10;
+      const boost=next.createGain();boost.gain.value=4;
+      const limiter=next.createDynamicsCompressor();
+      limiter.threshold.value=-1;limiter.knee.value=0;limiter.ratio.value=20;
+      limiter.attack.value=0;limiter.release.value=.05;
+      harmony.connect(compressor);metronome.connect(compressor);
+      compressor.connect(boost);boost.connect(limiter);limiter.connect(next.destination);
+      // Publish only a fully connected graph so a failed setup can be retried.
+      ctx=next;master=harmony;metroMaster=metronome;
+      next.addEventListener('statechange',()=>{
+        if(ctx===next&&(next.state==='interrupted'||next.state==='closed')){stopNotes();stopMetro();}
+      });
+    }catch(error){next?.close().catch(()=>{});throw error;}
+  }
+  if(ctx.state!=='running'){
+    const context=ctx;
+    context.resume().catch(()=>{
+      if(ctx!==context)return;
+      stopNotes();stopMetro();toast('音声を開始できませんでした。もう一度操作してください。');
     });
   }
-  if(ctx.state!=='running')ctx.resume().catch(()=>{stopNotes();stopMetro();toast('音声を開始できませんでした。もう一度鍵盤を押してください。');});
   return ctx;
 }
+
 const spectra={Fl:[1,.12,.06,.02],Cl:[1,0,.55,0,.25,0,.12],Brass:[1,.7,.5,.35,.23,.16],Organ:[1,.45,.3,.15,.1],Piano:[1,.5,.28,.14,.07]};
 function makeVoice(key){audio();if(state.voice==='Piano'||state.voice==='PipeOrgan')return createKeyboardVoice(ctx,master,60+key+state.transpose+12*state.oct,state.reference,state.voice);const t=ctx.currentTime,midi=60+key+state.transpose+12*state.oct,osc=ctx.createOscillator(),gain=ctx.createGain();const spec=spectra[state.voice],real=new Float32Array(spec.length+1),imag=new Float32Array(spec.length+1);spec.forEach((v,i)=>imag[i+1]=v);osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));osc.frequency.value=state.reference*2**((midi-69)/12);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.7,t+.02);if(state.voice==='Piano'){gain.gain.exponentialRampToValueAtTime(.1,t+.9);gain.gain.exponentialRampToValueAtTime(.001,t+4);}osc.connect(gain).connect(master);return {osc,gain,midi,started:false};}
 function release(key,recalculate=true){const v=active.get(key);if(!v)return;const param=v.gain.gain;if(param.cancelAndHoldAtTime)param.cancelAndHoldAtTime(ctx.currentTime);else{param.cancelScheduledValues(ctx.currentTime);param.setValueAtTime(param.value,ctx.currentTime);}param.setTargetAtTime(0,ctx.currentTime,.018);try{v.osc.stop(ctx.currentTime+.12);}catch{}v.osc.onended=()=>{v.osc.disconnect();v.gain.disconnect();};active.delete(key);if(recalculate)retune();}
