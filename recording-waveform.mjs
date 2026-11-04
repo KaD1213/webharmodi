@@ -21,6 +21,7 @@ export function createRecordingWaveform(canvas) {
       canvas.hidden=false;
       const paint=now=>{
         if(stopped)return;
+        if(canvas.clientWidth===0||canvas.clientHeight===0){frame=requestAnimationFrame(paint);return;}
         if(now-last>=65){
           last=now;analyser.getFloatTimeDomainData(samples);
           let energy=0;for(const sample of samples)energy+=sample*sample;

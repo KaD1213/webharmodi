@@ -91,3 +91,73 @@ html[data-design=paper]:not([data-design=default]) .controls :is(.voice-grid but
 html[data-theme=dark] .range-overview input#rangeSlider::-webkit-slider-runnable-track{background:transparent;height:100%;border-radius:0}
 html[data-theme=dark] .range-overview input#rangeSlider::-moz-range-track{background:transparent;height:100%;border-radius:0}
 html[data-design]:not([data-design=default]) .tempo-nudge button{border-radius:50%;padding:0}
+/* Shared iOS interaction and material system. Instrument surfaces stay opaque. */
+:root{--motion-quick:160ms;--motion-settle:360ms;--motion-spring:cubic-bezier(.18,.85,.25,1);--nav-material:rgba(250,250,252,.78);--nav-edge:rgba(255,255,255,.72)}
+html[data-theme=dark]{--nav-material:rgba(38,38,42,.8);--nav-edge:rgba(255,255,255,.12)}
+button:not(.key),a[download]{transition:scale var(--motion-quick) var(--motion-spring),filter var(--motion-quick) ease,background-color 180ms ease,box-shadow 180ms ease;}
+button:not(.key):active{opacity:1}
+button.touch-down:not(.key),a.touch-down[download]{scale:.96;filter:brightness(.94)}
+button:disabled{cursor:default}
+.app-actions{gap:4px!important}
+.app-actions .icon-button{display:grid;place-items:center;border-radius:50%;width:44px;min-height:44px;padding:10px}
+.app-actions .icon-button svg{width:23px;height:23px;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.app-actions .icon-button:hover{background:color-mix(in srgb,var(--blue) 6%,transparent)}
+.tabs{background:var(--nav-material)!important;border:1px solid var(--nav-edge);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);box-shadow:0 4px 18px #00000008,inset 0 1px 0 #ffffff28}
+.tabs button{letter-spacing:-.2px}
+.tabs,.segments,.color-picker{touch-action:pan-y}
+.thumb{transition:transform 340ms var(--motion-spring),width 340ms var(--motion-spring),height 340ms var(--motion-spring),opacity 160ms ease}
+.selection-dragging .thumb{transition:transform 80ms linear,width 80ms linear}
+.control>label{font-size:12px;font-weight:500;line-height:1.4;margin:0 0 8px 2px;letter-spacing:.1px}
+.controls{gap:20px;align-items:start}
+.controls .control,.controls .tuning-row{width:100%;min-width:0}
+.voice-grid{gap:8px}
+.voice-grid button{min-height:44px;border-radius:12px;font-weight:500}
+.segments{min-height:44px}
+.hold{min-height:44px;border-radius:12px}
+#takeClock,#recordingMiniTime,.tempo-number input,#weightTempoReadout,.take-times{font-variant-numeric:tabular-nums lining-nums}
+.take-head h2{font-size:20px;letter-spacing:-.5px}
+.take-face{border-radius:16px;padding:14px 12px;gap:12px;transition:transform 420ms var(--motion-spring);border-color:color-mix(in srgb,var(--muted) 15%,transparent)}
+.take-delete{transition:transform 420ms var(--motion-spring);font-weight:600}
+#recordClips article{border-radius:16px}
+.take-play{display:grid;place-items:center;min-width:44px;min-height:44px;background:color-mix(in srgb,var(--blue) 9%,transparent);font-size:18px}
+.take-scrubber input[type=range]::-webkit-slider-runnable-track{background:linear-gradient(to right,var(--blue) var(--played,0%),var(--line) var(--played,0%));height:4px;border-radius:4px}
+.take-scrubber input[type=range]::-webkit-slider-thumb{width:16px;height:16px;margin-top:-6px;box-shadow:0 1px 4px #0003}
+.take-scrubber input[type=range]::-moz-range-progress{background:var(--blue);height:4px;border-radius:4px}
+.take-scrubber input[type=range]::-moz-range-thumb{width:16px;height:16px;background:white;border:0;box-shadow:0 1px 4px #0003}
+.recording-strip{align-self:center;justify-content:center;gap:0;width:max-content;max-width:100%;border-radius:999px;padding:3px 4px;margin:0 auto 12px;background:var(--nav-material);border:1px solid var(--nav-edge);box-shadow:0 3px 14px #0000000c;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.recording-strip button{min-height:38px;border-radius:999px;color:#e03245;font-weight:600;padding:6px 12px;min-width:44px}
+#recordingMiniStop{font-size:14px;background:#ed445214;border:1px solid #ed44521a}
+.recording-dot{animation:record-breathe 1.6s ease-in-out infinite}
+@keyframes record-breathe{50%{opacity:.5}}
+body.metro-focus-open .recording-strip{left:50%;right:auto;transform:translateX(-50%);width:max-content;background:var(--nav-material)}
+#settingsDialog,#fullscreenHelp{border:1px solid var(--nav-edge);border-radius:28px 28px 0 0;margin:auto auto var(--keyboard-inset,0px);width:min(600px,100%);max-height:calc(92dvh - var(--keyboard-inset,0px));padding:10px 20px calc(24px + env(safe-area-inset-bottom));overscroll-behavior:contain;scroll-padding-block:80px 24px;box-shadow:0 -10px 60px #0000001a;}
+#settingsDialog .dialog-head{position:sticky;top:-10px;z-index:6;margin:0 -20px 18px;padding:8px 20px 12px;background:color-mix(in srgb,var(--workspace-panel,#fff) 94%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid color-mix(in srgb,var(--muted) 15%,transparent)}
+.dialog-head button{min-height:44px!important;padding:8px 14px!important;border-radius:999px;font-weight:600}
+.sheet-handle{width:50px;background-color:#aaaab0;margin-bottom:6px;flex:none}
+.setting-list{border-radius:16px;padding-inline:16px}
+.setting-list>label{min-height:54px;font-size:15px}
+.settings-section h3,.appearance-label{font-size:12px;font-weight:500;letter-spacing:.2px}
+.setting-list select{min-height:44px;font-size:15px;max-width:55%}
+.switch{width:50px;height:30px;transition:background-color 220ms ease}
+.switch:before{width:26px;height:26px;transition:transform 280ms var(--motion-spring)}
+.switch:checked:before{transform:translateX(20px)}
+@keyframes sheet-up{from{transform:translateY(100%);opacity:1}to{transform:translateY(0);opacity:1}}
+dialog[open]{animation:sheet-up 420ms var(--motion-spring)}
+dialog::backdrop{background:#0005;backdrop-filter:blur(4px)}
+@media(orientation:landscape) and (max-height:550px){
+ .appbar{gap:12px!important;grid-template-columns:minmax(140px,1fr) minmax(260px,1.6fr) auto!important;min-height:52px}
+ .app-actions .icon-button{width:40px;min-height:44px;padding:9px}
+ #settingsDialog,#fullscreenHelp{max-height:92dvh}
+}
+@media(max-width:600px) and (orientation:portrait){
+ .controls{padding:20px;gap:20px}
+ .tabs{bottom:max(12px,env(safe-area-inset-bottom))}
+ .record-card{border-radius:22px;padding:20px}
+ .take-face{padding:12px 10px;gap:8px}
+ #settingsDialog,#fullscreenHelp{width:100%;border-bottom:0}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+ .recording-dot{animation:none}
+}
+@media(prefers-contrast:more){.tabs,.recording-strip{background:var(--workspace-panel,#fff)!important;border:1px solid currentColor}.control>label,.take-times{color:inherit}}

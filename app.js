@@ -1,4 +1,5 @@
 import {createRecordingWaveform} from './recording-waveform.mjs';
+import './ios-interactions.mjs';
 import {createKeyboardVoice} from './keyboard-voices.mjs';
 import {initMetronomeFocus} from './metronome-focus.mjs';
 'use strict';
@@ -66,6 +67,7 @@ function persist(){
 let ctx,master,metroMaster,playing=false,timer,nextTime=0,tick=0,generation=0;
 let pendulumFrames=[],pendulumRAF=0,pendulumAngle=0;
 let pendulumDirection = 1;
+let recordingCaptureActive=false;
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 function balanceGains(){
   const position=(state.balance+100)/200;
@@ -115,7 +117,7 @@ function audio(){
     let next;
     try{
       // Change the iOS audio session once, rather than during each note/voice update.
-      try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback';}catch{}
+      try{if(navigator.audioSession&&!recordingCaptureActive&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback';}catch{}
       next=new Audio({latencyHint:'interactive'});
       const harmony=next.createGain(),metronome=next.createGain();
       const gains=balanceGains();harmony.gain.value=gains.harmony;metronome.gain.value=gains.metronome;
@@ -131,7 +133,9 @@ function audio(){
       // Publish only a fully connected graph so a failed setup can be retried.
       ctx=next;master=harmony;metroMaster=metronome;
       next.addEventListener('statechange',()=>{
-        if(ctx===next&&(next.state==='interrupted'||next.state==='closed')){stopNotes();stopMetro();}
+        if(ctx!==next)return;
+        if(next.state==='interrupted'&&recordingCaptureActive){next.resume().catch(()=>{});return;}
+        if(next.state==='interrupted'||next.state==='closed'){stopNotes();stopMetro();}
       });
     }catch(error){next?.close().catch(()=>{});throw error;}
   }
@@ -607,16 +611,41 @@ $('appVersion').textContent=appVersion?'バージョン '+appVersion.slice(0,8):
 if('serviceWorker'in navigator&&!localPreview){
   let registration=null,applyingUpdate=false,reloading=false,checking=false,lastCheck=0;
   const watched=new WeakSet();
+  let automaticTimer=0,lastInteraction=Date.now(),reloadPending=false,manualApply=false;
+  let hadController=Boolean(navigator.serviceWorker.controller);
+  const noteInteraction=()=>{lastInteraction=Date.now();};
+  document.addEventListener('pointerdown',noteInteraction,{passive:true});
+  document.addEventListener('keydown',noteInteraction);
+  function canAutoUpdate(manual=false){
+    return !document.hidden && !playing && active.size===0
+      && $('recordToggle').dataset.recording!=='true' && !$('recordToggle').disabled
+      && $('recordClips').childElementCount===0
+      && $('panel-tuner').hidden
+      && (manual||!document.querySelector('dialog[open]'))
+      && !document.querySelector('.record-name-input')
+      && ![...document.querySelectorAll('audio')].some(player=>!player.paused)
+      && Date.now()-lastInteraction>=2000;
+  }
+  function queueAutomaticUpdate(){
+    clearTimeout(automaticTimer);
+    if(document.hidden||reloading)return;
+    automaticTimer=setTimeout(()=>{
+      if(!canAutoUpdate()){queueAutomaticUpdate();return;}
+      if(reloadPending){reloadUpdated();return;}
+      if(registration?.waiting&&!applyingUpdate)applyUpdate(false);
+    },1000);
+  }
   const status=message=>$('offlineStatus').textContent=message;
   function reloadUpdated(){
-    if(!applyingUpdate||reloading)return;
-    reloading=true;persist();location.reload();
+    if((!applyingUpdate&&!reloadPending)||reloading)return;
+    if(!canAutoUpdate(manualApply)){reloadPending=true;queueAutomaticUpdate();return;}
+    reloading=true;clearTimeout(automaticTimer);persist();location.reload();
   }
   function offerUpdate(){
     if(applyingUpdate)return;
     const waiting=registration?.waiting;
     $('applyUpdate').hidden=!waiting||!navigator.serviceWorker.controller;
-    if(waiting&&navigator.serviceWorker.controller)status('新しいバージョンがあります');
+    if(waiting&&navigator.serviceWorker.controller){status('新しいバージョンがあります · 自動更新を待機中');queueAutomaticUpdate();}
     else if(registration?.installing)status('新しいバージョンをダウンロード中…');
     else if(registration?.active)status('オフラインで利用できます');
   }
@@ -665,12 +694,19 @@ if('serviceWorker'in navigator&&!localPreview){
   }
   $('checkUpdate').onclick=()=>checkUpdate(true);
   $('settingsOpen').addEventListener('click',()=>checkUpdate());
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate();});
-  $('applyUpdate').onclick=()=>{
-    if(playing||active.size){toast('発音とメトロノームを停止してから更新してください。');return;}
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkUpdate();if(reloadPending||registration?.waiting)queueAutomaticUpdate();}});
+  window.addEventListener('pageshow',()=>{checkUpdate();if(reloadPending||registration?.waiting)queueAutomaticUpdate();});
+  window.addEventListener('online',()=>checkUpdate());
+  registrationReady.then(()=>checkUpdate()).catch(()=>{});
+  function applyUpdate(manual=true){
+    if(applyingUpdate)return;
+    if(!canAutoUpdate(manual)){
+      if(manual)toast('録音や演奏を終えてから更新します。録音一覧がある場合は保存・削除するか、次回起動時に更新します。');
+      queueAutomaticUpdate();return;
+    }
     const worker=registration?.waiting;
     if(!worker){checkUpdate(true);return;}
-    applyingUpdate=true;persist();$('applyUpdate').disabled=true;$('checkUpdate').disabled=true;
+    manualApply=manual;applyingUpdate=true;persist();$('applyUpdate').disabled=true;$('checkUpdate').disabled=true;
     $('applyUpdate').textContent='更新中…';status('更新を適用しています…');
     // controllerchange is the primary signal; the active worker check is a fallback
     // for a missed event on a suspended iPhone / Home Screen session.
@@ -681,8 +717,12 @@ if('serviceWorker'in navigator&&!localPreview){
       if(worker.state==='activated'||registration.active===worker)reloadUpdated();
       else{applyingUpdate=false;$('applyUpdate').disabled=false;$('checkUpdate').disabled=false;$('applyUpdate').textContent='更新を適用';status('更新を完了できませんでした。もう一度お試しください。');}
     },8000);
-  };
-  navigator.serviceWorker.addEventListener('controllerchange',reloadUpdated);
+  }
+  $('applyUpdate').onclick=()=>{lastInteraction=0;applyUpdate(true);};
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!hadController){hadController=true;return;}
+    reloadPending=true;queueAutomaticUpdate();
+  });
 }else{
   $('offlineStatus').textContent=localPreview?'ローカルプレビューを表示中':'このブラウザではオンラインでご利用ください';
   $('checkUpdate').hidden=true;
@@ -799,11 +839,21 @@ syncAppearanceUI();
 {
  const panel=$('panel-record'),button=$('recordToggle'),status=$('recordStatus');
  let recorder=null,requestId=0,count=0,clockTimer;
+ const strip=$('recordingStrip');
+ const updateRecordingStrip=()=>{
+   strip.hidden=!recordingCaptureActive||!panel.hidden;
+   $('recordingMiniStop').disabled=button.disabled;
+ };
+ function updateRecordTime(value){$('takeClock').textContent=value;$('recordingMiniTime').textContent=value;}
+ $('recordingMiniOpen').onclick=()=>{$('tab-record').click();};
+ $('recordingMiniStop').onclick=()=>stopRecording();
+ new MutationObserver(updateRecordingStrip).observe(panel,{attributes:true,attributeFilter:['hidden']});
  const time=ms=>{const sec=Math.floor(ms/1000);return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');};
  function recordingUI(active){
    button.dataset.recording=String(active);
    button.title=active?'録音を終了':'新規録音';
    button.setAttribute('aria-label',button.title);
+   updateRecordingStrip();
  }
  let closeOpenRow=null;
  function mountTake(row,player,save,label,detail,recordedSeconds){
@@ -848,7 +898,16 @@ syncAppearanceUI();
    const sync=()=>{play.textContent=player.paused?'▶':'Ⅱ';play.setAttribute('aria-label',label.textContent+(player.paused?'を再生':'を一時停止'));};sync();
    player.onplay=player.onpause=player.onended=sync;
    play.onclick=async()=>{if(!player.paused){player.pause();return;}for(const other of panel.querySelectorAll('audio'))if(other!==player)other.pause();try{await player.play();}catch{status.textContent='再生できませんでした。';}};
-   del.onclick=()=>{close();player.pause();const url=save.href;player.removeAttribute('src');player.load();row.remove();URL.revokeObjectURL(url);};
+   del.onclick=async()=>{
+     if(row.inert)return;
+     row.inert=true;player.pause();
+     const url=save.href;player.removeAttribute('src');player.load();
+     if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+       const height=row.getBoundingClientRect().height;
+       await row.animate([{height:height+'px',opacity:1,marginTop:'16px'},{height:'0px',opacity:0,marginTop:'0px'}],{duration:280,easing:'cubic-bezier(.3,0,.2,1)',fill:'forwards'}).finished.catch(()=>{});
+     }
+     row.remove();URL.revokeObjectURL(url);
+   };
    let drag=null,swiped=false,renameTimer=null,editing=false;
    const originalDownload=save.download;
    const extension=originalDownload.slice(originalDownload.lastIndexOf('.'));
@@ -932,10 +991,11 @@ syncAppearanceUI();
    if(recorder){stopRecording();return;}
    if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){status.textContent='このブラウザでは録音できません。';return;}
    const id=++requestId;
-   button.disabled=true;status.textContent='マイクの使用を許可してください';
+   button.disabled=true;recordingCaptureActive=true;updateRecordingStrip();status.textContent='マイクの使用を許可してください';
    let stream,take,waveform;
    let recordingFailed=false;
    function restorePlayback(){
+     recordingCaptureActive=false;updateRecordingStrip();
      if(!$('panel-tuner').hidden)return;
      try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch{}
    }
@@ -944,7 +1004,7 @@ syncAppearanceUI();
      if(recorder===take)recorder=null;
      restorePlayback();
      if(id!==requestId)return;
-     button.disabled=false;recordingUI(false);$('takeClock').textContent='00:00';
+     button.disabled=false;recordingUI(false);updateRecordTime('00:00');
      const messages={
        NotAllowedError:'録音するにはマイクの使用を許可してください。',
        NotFoundError:'マイクが見つかりません。',
@@ -954,13 +1014,15 @@ syncAppearanceUI();
        AbortError:'マイクの開始が中断されました。もう一度試してください。'
      };
      status.textContent=messages[error.name]||'録音を開始できませんでした（'+(error.name||'不明なエラー')+'）。';
+     if(panel.hidden)$('tab-record').click();
    }
    try{
      // Safari must be allowed to capture audio after instrument playback.
      try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch{}
      waveform=createRecordingWaveform($('recordWaveform'));
      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-     if(id!==requestId||panel.hidden){waveform?.stop();stream.getTracks().forEach(t=>t.stop());restorePlayback();return;}
+     if(id!==requestId){waveform?.stop();stream.getTracks().forEach(t=>t.stop());restorePlayback();return;}
+     if(ctx&&ctx.state!=='closed'&&ctx.state!=='running')ctx.resume().catch(()=>{});
      // Prefer native AAC on Safari and Opus on browsers that support it.
      const mimeTypes=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
      const mimeType=mimeTypes.find(type=>MediaRecorder.isTypeSupported?.(type));
@@ -983,11 +1045,11 @@ syncAppearanceUI();
        save.download='WebHarmoDi-'+started.toISOString().replace(/:/g,'-')+(/mp4/i.test(type)?'.m4a':/ogg/i.test(type)?'.ogg':'.webm');
        save.textContent='↓';save.title='ダウンロード';save.setAttribute('aria-label',label.textContent+'をダウンロード');mountTake(row,player,save,label,length+' · '+session,Math.max(.01,(Date.now()-started)/1000));
        status.textContent='';
+       if(panel.hidden){$('tab-record').click();}
      };
-     take.start();waveform.start(stream);$('takeClock').textContent='00:00';clockTimer=setInterval(()=>{$('takeClock').textContent=time(Date.now()-started);},250);recorder=take;button.disabled=false;recordingUI(true);status.textContent='';
+     take.start();waveform.start(stream);$('takeClock').textContent='00:00';clockTimer=setInterval(()=>{updateRecordTime(time(Date.now()-started));},250);recorder=take;button.disabled=false;recordingUI(true);status.textContent='';
    }catch(error){recordingFailed=true;recordingError(error);}
  };
- new MutationObserver(()=>{if(panel.hidden)stopRecording();}).observe(panel,{attributes:true,attributeFilter:['hidden']});
  window.addEventListener('pagehide',stopRecording);
 }
 

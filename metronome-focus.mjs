@@ -41,6 +41,10 @@ export function initMetronomeFocus({start, stop, isPlaying, prepareAudio}) {
   panel.addEventListener('pointercancel', releaseNeedle, true);
 
   function setExpanded(value) {
+    if (value === expanded) return;
+    const mechanism = panel.querySelector('.mechanism');
+    const before = mechanism.getBoundingClientRect();
+    mechanism.getAnimations().forEach(animation => animation.cancel());
     expanded = value;
     panel.classList.toggle('metro-expanded', value);
     document.body.classList.toggle('metro-focus-open', value);
@@ -49,6 +53,14 @@ export function initMetronomeFocus({start, stop, isPlaying, prepareAudio}) {
     button.setAttribute('aria-label', value ? '通常表示に戻す' : 'スマホをメトロノームにする');
     button.querySelector('span').textContent = value ? '戻る' : 'メト表示';
     window.dispatchEvent(new Event('resize'));
+    // Animate the existing instrument, so its live needle is never duplicated.
+    const after = mechanism.getBoundingClientRect();
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && before.width && after.width) {
+      mechanism.animate([
+        {transformOrigin:'0 0',transform:`translate(${before.left-after.left}px,${before.top-after.top}px) scale(${before.width/after.width},${before.height/after.height})`},
+        {transformOrigin:'0 0',transform:'none'}
+      ], {duration:420,easing:'cubic-bezier(.2,.8,.2,1)'});
+    }
   }
 
   function close() { setExpanded(false); }
