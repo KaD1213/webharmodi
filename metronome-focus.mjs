@@ -6,6 +6,20 @@ export function initMetronomeFocus({start, stop, isPlaying, prepareAudio}) {
   const rail = document.getElementById('tempoRail');
   const weight = document.getElementById('visibleTempoWeight');
   let flick = null;
+  const guideKey = 'webharmodi-metronome-gesture-learned';
+  let guideLearned = false;
+  try { guideLearned = localStorage.getItem(guideKey) === 'true'; } catch {}
+  const guide = document.createElement('div');
+  guide.className = 'metro-gesture-guide';
+  guide.hidden = true;
+  guide.innerHTML = '<svg viewBox="0 0 100 68" aria-hidden="true"><path class="gesture-arrow" d="M15 22h70m-8-7 8 7-8 7"/><g class="gesture-hand"><path d="M40 57 30 44q-3-6 2-7l8 5V18q0-7 6-7t6 7v17l5-3 7 3 7 0 5 6-3 16Z"/></g></svg><span>針を横に払って開始</span>';
+  panel.querySelector('.mechanism').append(guide);
+  new MutationObserver(() => {
+    if (!expanded || document.getElementById('tab-metronome').dataset.active !== 'true') return;
+    guide.hidden = true;
+    guideLearned = true;
+    try { localStorage.setItem(guideKey, 'true'); } catch {}
+  }).observe(document.getElementById('tab-metronome'), {attributes:true, attributeFilter:['data-active']});
   // Catch touches on the stationary body as well as the moving arm.
   panel.addEventListener('pointerdown', event => {
     if (!expanded || !isPlaying() || !event.isPrimary || event.button !== 0 || button.contains(event.target)) return;
@@ -46,6 +60,7 @@ export function initMetronomeFocus({start, stop, isPlaying, prepareAudio}) {
     const before = mechanism.getBoundingClientRect();
     mechanism.getAnimations().forEach(animation => animation.cancel());
     expanded = value;
+    guide.hidden = !value || guideLearned || isPlaying();
     panel.classList.toggle('metro-expanded', value);
     document.body.classList.toggle('metro-focus-open', value);
     appbar.inert = value;

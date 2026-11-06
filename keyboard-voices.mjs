@@ -1,4 +1,4 @@
-export function createKeyboardVoice(context, output, midi, reference, kind) {
+export function createKeyboardVoice(context, output, midi, reference, kind, pure = false) {
   const now = context.currentTime;
   const fundamental = reference * 2 ** ((midi - 69) / 12);
   const gain = context.createGain();
@@ -14,7 +14,9 @@ export function createKeyboardVoice(context, output, midi, reference, kind) {
   for (const partial of partials) {
     if (fundamental*partial.ratio > context.sampleRate*.44) continue;
     const source = context.createOscillator(), envelope = context.createGain();
-    source.frequency.value = fundamental*partial.ratio;
+    const harmonic = piano ? sources.length + 1 : partial.ratio;
+    source.frequency.value = fundamental * (pure && piano ? harmonic : partial.ratio);
+    source.pitchRatios = {natural: partial.ratio, pure: harmonic};
     envelope.gain.setValueAtTime(0, now);
     envelope.gain.linearRampToValueAtTime(partial.level/total, now+(piano?.003:.055));
     if (piano) {
@@ -25,12 +27,16 @@ export function createKeyboardVoice(context, output, midi, reference, kind) {
     sources.push(source);nodes.push(envelope);
   }
   // A slightly detuned companion string adds piano unison beating.
+  let companionGate;
   if (piano && fundamental < context.sampleRate*.4) {
     const string=context.createOscillator(),envelope=context.createGain();
     string.frequency.value=fundamental*2**(1.4/1200);
     envelope.gain.setValueAtTime(0,now);envelope.gain.linearRampToValueAtTime(.13,now+.005);
     envelope.gain.exponentialRampToValueAtTime(.00001,now+decay);
-    string.connect(envelope).connect(gain);sources.push(string);nodes.push(envelope);
+    companionGate = context.createGain();
+    companionGate.gain.value = pure ? 0 : 1;
+    string.connect(envelope).connect(companionGate).connect(gain);
+    sources.push(string);nodes.push(envelope, companionGate);
   }
   gain.gain.value = piano ? .85 : .7;
   // Match the existing voice interface so chord retuning, hold and MIDI still work.
@@ -49,5 +55,15 @@ export function createKeyboardVoice(context, output, midi, reference, kind) {
     disconnect(){for(const source of sources)source.disconnect();for(const node of nodes)node.disconnect();}
   };
   sources[0].onended=()=>osc.onended?.();
-  return {osc,gain,midi,started:false};
+  function setPureMode(enabled) {
+    if (!piano || enabled === pure) return;
+    pure = enabled;
+    for (const source of sources) {
+      if (!source.pitchRatios) continue;
+      const ratio = pure ? source.pitchRatios.pure : source.pitchRatios.natural;
+      source.frequency.setTargetAtTime(fundamental * ratio, context.currentTime, .025);
+    }
+    companionGate?.gain.setTargetAtTime(pure ? 0 : 1, context.currentTime, .025);
+  }
+  return {osc,gain,midi,started:false,setPureMode};
 }

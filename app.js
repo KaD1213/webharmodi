@@ -102,6 +102,7 @@ function retune(){
     // Start new voices at the corrected pitch; glide only already sounding ones.
     const held=new Map();
     for(const [midi,v] of voices){
+      v.setPureMode?.(state.pure);
       if(!v.started){v.osc.detune.value=tuning.cents[midi]??0;v.osc.start();v.started=true;}
       else held.set(midi,v);
     }
@@ -150,7 +151,7 @@ function audio(){
 }
 
 const spectra={Fl:[1,.12,.06,.02],Cl:[1,0,.55,0,.25,0,.12],Brass:[1,.7,.5,.35,.23,.16],Organ:[1,.45,.3,.15,.1],Piano:[1,.5,.28,.14,.07]};
-function makeVoice(key){audio();if(state.voice==='Piano'||state.voice==='PipeOrgan')return createKeyboardVoice(ctx,master,60+key+state.transpose+12*state.oct,state.reference,state.voice);const t=ctx.currentTime,midi=60+key+state.transpose+12*state.oct,osc=ctx.createOscillator(),gain=ctx.createGain();const spec=spectra[state.voice],real=new Float32Array(spec.length+1),imag=new Float32Array(spec.length+1);spec.forEach((v,i)=>imag[i+1]=v);osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));osc.frequency.value=state.reference*2**((midi-69)/12);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.7,t+.02);if(state.voice==='Piano'){gain.gain.exponentialRampToValueAtTime(.1,t+.9);gain.gain.exponentialRampToValueAtTime(.001,t+4);}osc.connect(gain).connect(master);return {osc,gain,midi,started:false};}
+function makeVoice(key){audio();if(state.voice==='Piano'||state.voice==='PipeOrgan')return createKeyboardVoice(ctx,master,60+key+state.transpose+12*state.oct,state.reference,state.voice,state.pure);const t=ctx.currentTime,midi=60+key+state.transpose+12*state.oct,osc=ctx.createOscillator(),gain=ctx.createGain();const spec=spectra[state.voice],real=new Float32Array(spec.length+1),imag=new Float32Array(spec.length+1);spec.forEach((v,i)=>imag[i+1]=v);osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));osc.frequency.value=state.reference*2**((midi-69)/12);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.7,t+.02);if(state.voice==='Piano'){gain.gain.exponentialRampToValueAtTime(.1,t+.9);gain.gain.exponentialRampToValueAtTime(.001,t+4);}osc.connect(gain).connect(master);return {osc,gain,midi,started:false};}
 function release(key,recalculate=true){const v=active.get(key);if(!v)return;const param=v.gain.gain;if(param.cancelAndHoldAtTime)param.cancelAndHoldAtTime(ctx.currentTime);else{param.cancelScheduledValues(ctx.currentTime);param.setValueAtTime(param.value,ctx.currentTime);}param.setTargetAtTime(0,ctx.currentTime,.018);try{v.osc.stop(ctx.currentTime+.12);}catch{}v.osc.onended=()=>{v.osc.disconnect();v.gain.disconnect();};active.delete(key);if(recalculate)retune();}
 function press(key,owner){
   if(owners.has(owner))return;
@@ -171,7 +172,7 @@ function keyPitchName(key){
 }
 function renderNotes(){
   $('tab-harmony').dataset.active=String(active.size>0);
-  $('tab-harmony').setAttribute('aria-label',active.size?'ハーモニー（発音中）':'ハーモニー');
+  $('tab-harmony').setAttribute('aria-label','ハーモニー');
   document.querySelectorAll('.key').forEach(el=>{
     const on=active.has(+el.dataset.key);
     el.classList.toggle('sounding',on);
@@ -263,7 +264,7 @@ $('hold').onclick=()=>{state.hold=!state.hold;$('hold').classList.toggle('active
 $('balance').oninput=e=>{state.balance=Math.max(-100,Math.min(100,+e.target.value));syncBalance();};
 $('balanceReset').onclick=()=>{state.balance=0;syncBalance();};
 for(const [id,delta]of [['octDown',-1],['octUp',1]])$(id).onclick=()=>{setRange(viewIndex+delta*7);persist();};
-$('settingsOpen').onclick=()=>$('settingsDialog').showModal();$('settingsClose').onclick=()=>$('settingsDialog').close();
+$('settingsOpen').onclick=()=>$('settingsDialog').showModal();
 $('reference').onchange=e=>{const n=e.target.value.trim()===''?state.reference:Number(e.target.value);state.reference=Number.isFinite(n)?Math.max(430,Math.min(450,n)):state.reference;e.target.value=state.reference;for(const v of active.values())v.osc.frequency.setTargetAtTime(state.reference*2**((v.midi-69)/12),ctx.currentTime,.025);retune();drawControls();};
 noteNames.forEach((name,i)=>{const o=document.createElement('option');o.value=i;o.textContent=name;$('contextKey').append(o);});
 function updateContext(){contextKey=+$('contextKey').value;contextMode=$('contextMode').value;tuner.setKey(contextKey,contextMode);tuner.reset();retune();drawControls();}
@@ -293,7 +294,7 @@ function drawRhythmModes(){
 }
 function syncMeterControls(){
   const view=meterView(state);
-  $('beats').value=view.selection;$('meterPreset').value=view.preset;
+  $('beats').value=view.selection;
   $('meterInfo').textContent=view.label;
   $('bpm').setAttribute('aria-label',state.meterDenominator===8?'テンポ（付点4分音符）':'テンポ（4分音符）');
   drawDots();drawRhythmModes();
@@ -364,7 +365,7 @@ async function startMetro(direction = -1){
  tick=0;pendulumFrames=[];nextTime=context.currentTime+.05;
  timer=setInterval(scheduler,25);scheduler();startPendulum();
  $('play').textContent='停止';$('play').classList.add('playing');$('play').setAttribute('aria-pressed','true');
- $('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム（再生中）');syncWakeLock();
+ $('tab-metronome').dataset.active='true';$('tab-metronome').setAttribute('aria-label','メトロノーム');syncWakeLock();
 }
 function stopMetro(){playing=false;stopPendulum();generation++;clearInterval(timer);visualTimers.forEach(clearTimeout);visualTimers.clear();scheduled.forEach(o=>{try{o.stop();}catch{}});scheduled.clear();$('play').textContent='開始';$('play').classList.remove('playing');$('play').setAttribute('aria-pressed','false');$('tab-metronome').dataset.active='false';$('tab-metronome').setAttribute('aria-label','メトロノーム');document.querySelectorAll('.dot').forEach(el=>el.classList.remove('lit'));syncWakeLock();}
 function drawDots(){$('beatDots').innerHTML='<span class="dot"></span>'.repeat(state.beats);}
@@ -779,10 +780,14 @@ syncAppearanceUI();
   }
 
   // Bottom-sheet behaviour: animated close, drag or swipe down to dismiss.
-  const closeSheet=d=>{if(!d.open||d.classList.contains('closing'))return;d.classList.add('closing');
+  const closeSheet=d=>{
+    if(!d.open||d.classList.contains('closing'))return;
+    // Start where the sheet is now, including during opening or after a drag.
+    d.style.setProperty('--sheet-close-from',getComputedStyle(d).transform);
+    d.classList.add('closing');
     let timeout;
     const cleanup=()=>{clearTimeout(timeout);d.removeEventListener('animationend',onAnimationEnd);d.removeEventListener('close',done);};
-    const done=()=>{cleanup();d.classList.remove('closing');d.style.removeProperty('--drag');d.style.transform='';d.style.transition='';if(d.open)d.close();};
+    const done=()=>{cleanup();if(d.open)d.close();d.classList.remove('closing');d.style.removeProperty('--sheet-close-from');d.style.transform='';d.style.transition='';};
     const onAnimationEnd=e=>{if(e.target===d&&e.animationName==='sheet-down')done();};
     d.addEventListener('animationend',onAnimationEnd);d.addEventListener('close',done);
     timeout=setTimeout(done,420);
@@ -797,10 +802,10 @@ syncAppearanceUI();
       if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeSheet(d);
     });
     let drag=null;
-    d.addEventListener('pointerdown',e=>{if(!e.target.closest('.sheet-handle,.dialog-head')||e.target.closest('button'))return;drag={id:e.pointerId,y:e.clientY,t:e.timeStamp,dy:0};d.setPointerCapture(e.pointerId);d.style.transition='none';});
+    d.addEventListener('pointerdown',e=>{if(d.classList.contains('closing')||!e.target.closest('.sheet-handle,.dialog-head')||e.target.closest('button'))return;drag={id:e.pointerId,y:e.clientY,t:e.timeStamp,dy:0};d.setPointerCapture(e.pointerId);d.style.transition='none';});
     d.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;drag.dy=Math.max(0,e.clientY-drag.y);d.style.transform=`translateY(${drag.dy}px)`;});
     const end=e=>{if(!drag||e.pointerId!==drag.id)return;const {dy,t}=drag,speed=dy/Math.max(1,e.timeStamp-t);drag=null;
-      if(dy>110||speed>.6){d.style.setProperty('--drag',dy+'px');closeSheet(d);}else{d.style.transition='transform .35s '+getComputedStyle(document.documentElement).getPropertyValue('--ease');d.style.transform='';}};
+      if(dy>110||speed>.6){closeSheet(d);}else{d.style.transition='transform .35s '+getComputedStyle(document.documentElement).getPropertyValue('--ease');d.style.transform='';}};
     d.addEventListener('pointerup',end);
     d.addEventListener('pointercancel',e=>{if(drag?.id!==e.pointerId)return;drag=null;d.style.transition='';d.style.transform='';});
   }
@@ -810,7 +815,6 @@ syncAppearanceUI();
   if(installed||!(root.requestFullscreen||root.webkitRequestFullscreen))$('fullscreen').hidden=true;
 
   // Both selectors reflect the same explicit, persisted meter state.
-  $('meterPreset').onchange=e=>setMeter(e.target.value?Number(e.target.value)*3+'/8':'4');
   syncMeterControls();
 
   // Named presets. Loading rewrites the saved settings and reloads, so sound stops cleanly.

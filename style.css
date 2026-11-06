@@ -89,7 +89,6 @@ html[data-theme="dark"] .setting-list>label{border-color:#3b3e48}
 html[data-theme="dark"] .setting-list select,html[data-theme="dark"] .setting-list input[type="number"]{color:#9fc2fa}
 html[data-theme="dark"] .switch{background:#4a4d57}
 html[data-theme="dark"] .switch:checked{background:#34c759}
-html[data-theme="dark"] .sheet-handle{background:#555862}
 html[data-theme="dark"] #fullscreenHelp p{color:#c4c6ce}
 html[data-theme="dark"]:fullscreen,html[data-theme="dark"]:-webkit-full-screen{background:#111318}
 
@@ -126,7 +125,7 @@ html[data-theme="dark"] .app-actions .icon-button:hover{background:#ffffff0a}
 @media(max-width:850px){.appbar{grid-template-columns:minmax(140px,1fr) minmax(190px,250px) auto;gap:12px}.appbar h1{font-size:22px}}
 @media(max-width:680px) and (orientation:landscape){.appbar{grid-template-columns:minmax(116px,1fr) minmax(176px,220px) auto;gap:8px}.appbar h1{font-size:18px}.app-actions{gap:0}.app-actions .icon-button,.app-actions #themeToggle,.app-actions #fullscreen{width:32px;height:32px;min-height:32px;padding:5px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
-.tabs button[data-active=true]::after{content:"";display:inline-block;width:5px;height:5px;margin-left:6px;border-radius:50%;background:var(--blue);vertical-align:middle}
+#tab-record[data-active=true]::after{content:"";display:inline-block;width:5px;height:5px;margin-left:6px;border-radius:50%;background:var(--blue);vertical-align:middle}
 .rhythm-mode>span{height:34px}.rhythm-mode svg{display:block;width:38px;height:36px}
 .tap{min-width:100px;min-height:40px;padding:8px 20px;border:1px solid #b5d5ff;border-radius:10px;background:#e7f1ff;color:#006bdf;font-weight:600;box-shadow:0 2px 0 #007aff18;touch-action:manipulation}
 .tap:active{background:#d4e6ff;box-shadow:none;transform:translateY(1px);opacity:1}
@@ -340,9 +339,10 @@ html[data-theme=dark]:is(:not([data-design]),[data-design=default]) .thumb{backg
 .tabs button[aria-selected=true],.segments button.active,.color-picker button[aria-pressed=true]{background:transparent!important;box-shadow:none!important}
 button{transition:opacity .15s,background-color .2s,color .2s}
 dialog[open]{animation:sheet-up .42s var(--ease)}dialog[open]::backdrop{animation:fade-in .3s ease}
-dialog.closing{animation:sheet-down .28s cubic-bezier(.4,0,1,1) forwards}dialog.closing::backdrop{animation:fade-out .28s ease forwards}
+dialog[open].closing{animation:sheet-down .32s cubic-bezier(.32,0,.7,1) both}
+dialog[open].closing::backdrop{animation:fade-out .32s ease forwards}
 @keyframes sheet-up{from{transform:translateY(60px);opacity:0}}
-@keyframes sheet-down{from{transform:translateY(var(--drag,0px))}to{transform:translateY(110%)}}
+@keyframes sheet-down{from{transform:var(--sheet-close-from,none)}to{transform:translateY(110%)}}
 @keyframes fade-in{from{opacity:0}}@keyframes fade-out{to{opacity:0}}
 .sheet-handle,#settingsDialog>.dialog-head{touch-action:none}.sheet-handle{padding:0;background-clip:content-box;border:8px solid transparent;border-width:8px 0;width:60px;height:21px;background-color:#c7c7cc}
 /* portrait: floating capsule tab bar */
@@ -352,7 +352,7 @@ dialog.closing{animation:sheet-down .28s cubic-bezier(.4,0,1,1) forwards}dialog.
  .tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px;font-size:11px;border-radius:999px;padding:6px 4px}
  .tabs .thumb{border-radius:999px}
  .tab-icon{display:block;width:24px;height:24px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
- .tabs button[aria-selected=true]{color:var(--blue)}.tabs button[data-active=true]::after{display:none}
+ .tabs button[aria-selected=true]{color:var(--blue)}#tab-record[data-active=true]::after{display:none}
  .app-actions .icon-button{min-height:44px;width:44px;height:44px}
  #toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 }

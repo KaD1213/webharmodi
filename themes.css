@@ -133,7 +133,8 @@ body.metro-focus-open .recording-strip{left:50%;right:auto;transform:translateX(
 #settingsDialog,#fullscreenHelp{border:1px solid var(--nav-edge);border-radius:28px 28px 0 0;margin:auto auto var(--keyboard-inset,0px);width:min(600px,100%);max-height:calc(92dvh - var(--keyboard-inset,0px));padding:10px 20px calc(24px + env(safe-area-inset-bottom));overscroll-behavior:contain;scroll-padding-block:80px 24px;box-shadow:0 -10px 60px #0000001a;}
 #settingsDialog .dialog-head{position:sticky;top:-10px;z-index:6;margin:0 -20px 18px;padding:8px 20px 12px;background:color-mix(in srgb,var(--workspace-panel,#fff) 94%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid color-mix(in srgb,var(--muted) 15%,transparent)}
 .dialog-head button{min-height:44px!important;padding:8px 14px!important;border-radius:999px;font-weight:600}
-.sheet-handle{width:50px;background-color:#aaaab0;margin-bottom:6px;flex:none}
+dialog .sheet-handle{display:grid;place-items:center;width:60px;height:21px;margin:0 auto 4px;border:0;background:transparent}
+.sheet-handle::before{content:"";width:34px;height:3px;border-radius:999px;background:var(--muted,#8e8e93);opacity:.6}
 .setting-list{border-radius:16px;padding-inline:16px}
 .setting-list>label{min-height:54px;font-size:15px}
 .settings-section h3,.appearance-label{font-size:12px;font-weight:500;letter-spacing:.2px}
@@ -161,3 +162,10 @@ dialog::backdrop{background:#0005;backdrop-filter:blur(4px)}
  .recording-dot{animation:none}
 }
 @media(prefers-contrast:more){.tabs,.recording-strip{background:var(--workspace-panel,#fff)!important;border:1px solid currentColor}.control>label,.take-times{color:inherit}}
+/* A first-use gesture cue for the metronome. */
+.metro-gesture-guide{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);z-index:6;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;color:var(--blue);white-space:nowrap;font-size:13px;font-weight:600;padding:8px 16px;border-radius:18px;background:color-mix(in srgb,var(--workspace-panel,#fff) 90%,transparent);box-shadow:0 2px 16px #0000000a}
+.metro-gesture-guide svg{width:100px;height:68px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.gesture-arrow{opacity:.45;stroke-dasharray:3 5}
+.gesture-hand{fill:var(--workspace-panel,#fff);animation:metro-first-swipe 2.2s ease-in-out infinite}
+@keyframes metro-first-swipe{0%,15%{transform:translateX(-16px);opacity:.3}35%{opacity:1}75%,100%{transform:translateX(18px);opacity:.3}}
+@media(prefers-reduced-motion:reduce){.gesture-hand{animation:none;transform:none;opacity:1}}
